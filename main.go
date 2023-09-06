@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/ssh/terminal"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -144,6 +145,13 @@ func main() {
 				panic(err.Error())
 			}
 
+			oldState, err := terminal.MakeRaw(int(os.Stdin.Fd()))
+			if err != nil {
+				panic(err)
+			}
+
+			defer terminal.Restore(int(os.Stdin.Fd()), oldState)
+
 			err = exec.Stream(remotecommand.StreamOptions{
 				Stdin:  os.Stdin,
 				Stdout: os.Stdout,
@@ -155,18 +163,13 @@ func main() {
 				panic(err.Error())
 			}
 
-			//Find if PVC is mounted to a pod.
-			//nsPods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
-
-			// for _, pvc := range pvcs.Items {
-			// 	fmt.Printf("%s\n", pvc.Name)
-			// }
-
-			// // Check to see if the pvc is attached to a pod
-			// nsPods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
-			// var attachedPod corev1.Pod
-
-			// fmt.Printf("%s", attachedPod.Name)
+			deletePolicy := metav1.DeletePropagationForeground
+			err = clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pvcbPod.Name, metav1.DeleteOptions{
+				PropagationPolicy: &deletePolicy,
+			})
+			if err != nil {
+				panic(err.Error())
+			}
 
 			return nil
 		},
