@@ -15,6 +15,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/util/homedir"
 )
 
@@ -96,7 +97,7 @@ func main() {
 
 			pvcbPod := buildPvcbPod(namespace, *targetPvc)
 
-			pvcbPod, err = clientset.CoreV1().Pods("default").Create(context.TODO(), pvcbPod, metav1.CreateOptions{})
+			pvcbPod, err = clientset.CoreV1().Pods(namespace).Create(context.TODO(), pvcbPod, metav1.CreateOptions{})
 			if err != nil {
 				panic(err.Error())
 			}
@@ -106,7 +107,13 @@ func main() {
 			timeout := 30
 
 			for pvcbPod.Status.Phase != corev1.PodRunning && timeout > 0 {
-				fmt.Printf("Waiting for pod.\n")
+				fmt.Printf("Waiting for pod. Status: %s\n", pvcbPod.Status.Phase)
+
+				pvcbPod, err = clientset.CoreV1().Pods(namespace).Get(context.TODO(), pvcbPod.Name, metav1.GetOptions{})
+				if err != nil {
+					panic(err.Error())
+				}
+
 				time.Sleep(time.Second)
 				timeout--
 			}
@@ -118,7 +125,35 @@ func main() {
 
 			fmt.Printf("Pod started up ")
 
-			// If its not attached to a pod, deploy the pvcb image into the namespace and mount it
+			//cmd := []string{"/bin/sh"}
+
+			req := clientset.CoreV1().RESTClient().
+				Post().
+				Resource("pods").
+				Name(pvcbPod.Name).
+				Namespace(namespace).
+				SubResource("exec").
+				Param("stdin", "true").
+				Param("stdout", "true").
+				Param("stderr", "true").
+				Param("tty", "true").
+				Param("command", "/bin/bash")
+
+			exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
+			if err != nil {
+				panic(err.Error())
+			}
+
+			err = exec.Stream(remotecommand.StreamOptions{
+				Stdin:  os.Stdin,
+				Stdout: os.Stdout,
+				Stderr: os.Stderr,
+				Tty:    true,
+			})
+
+			if err != nil {
+				panic(err.Error())
+			}
 
 			//Find if PVC is mounted to a pod.
 			//nsPods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
