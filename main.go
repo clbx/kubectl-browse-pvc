@@ -11,6 +11,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ssh/terminal"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes"
@@ -142,7 +143,7 @@ func main() {
 
 			//Find created pod
 			podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
-				LabelSelector: "job-label=" + pvcbJob.Name,
+				LabelSelector: "job-name=" + pvcbJob.Name,
 			})
 
 			if err != nil {
@@ -150,10 +151,30 @@ func main() {
 			}
 
 			if len(podList.Items) != 1 {
+				fmt.Printf("%d\n", len(podList.Items))
 				panic("Didn't find one pod, handle this later")
 			}
 
-			pod := podList.Items[0]
+			pod := &podList.Items[0]
+
+			// Wait for pod to be ready
+
+			for pod.Status.Phase != corev1.PodRunning && timeout > 0 {
+				fmt.Printf("Waiting for pod. Status: %s\n", pod.Status.Phase)
+
+				pod, err = clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{})
+				if err != nil {
+					panic(err.Error())
+				}
+
+				time.Sleep(time.Second)
+				timeout--
+			}
+
+			if timeout == 0 {
+				fmt.Printf("Pod failed to start in \n")
+				os.Exit(1)
+			}
 
 			//cmd := []string{"/bin/sh"}
 
@@ -192,13 +213,13 @@ func main() {
 				panic(err.Error())
 			}
 
-			deletePolicy := metav1.DeletePropagationForeground
-			err = clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pvcbJob.Name, metav1.DeleteOptions{
-				PropagationPolicy: &deletePolicy,
-			})
-			if err != nil {
-				panic(err.Error())
-			}
+			// deletePolicy := metav1.DeletePropagationForeground
+			// err = clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{
+			// 	PropagationPolicy: &deletePolicy,
+			// })
+			// if err != nil {
+			// 	panic(err.Error())
+			// }
 
 			return nil
 		},

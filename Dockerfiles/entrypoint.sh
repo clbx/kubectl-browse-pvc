@@ -1,15 +1,17 @@
 #!/bin/bash
 
-function exit_job {
-    echo "exec closed"
+base_processes=$(pgrep -l bash | wc -l)
+echo "Processes: $base_processes"
+sleep 2
+
+while :; do
+    bash_processes=$(pgrep -l bash | wc -l)
+    if [ $bash_processes -gt $base_processes ]; then
+        echo "Found an additional process"
+        while [ $bash_processes -gt $base_processes ]; do
+            sleep 2
+            bash_processes=$(pgrep -l bash | wc -l)
+        done
     exit 0
-}
-
-trap exit_job SIGHUP
-
-echo "PVCB job started, waiting for connection"
-
-while :
-do
-    sleep 1
-done 
+    fi 
+done

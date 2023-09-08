@@ -33,9 +33,9 @@ func buildPvcbJob(namespace string, pvc corev1.PersistentVolumeClaim) *batchv1.J
 					Containers: []corev1.Container{
 						{
 							Name:    "pvcb-edit",
-							Image:   "ghcr.io/clbx/pvcb-edit",
-							Command: []string{"bin/bash", "-c", "--"},
-							Args:    []string{"while true; do sleep 30; done;"},
+							Image:   "clbx/pvcb-edit",
+							Command: []string{"/bin/bash", "-c", "--"},
+							Args:    []string{"/entrypoint.sh"},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "target-pvc",
