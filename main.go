@@ -11,7 +11,6 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ssh/terminal"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes"
@@ -96,27 +95,42 @@ func main() {
 				fmt.Printf("Attached to %s exiting.\n", attachedPod.Name)
 			}
 
-			pvcbPod := buildPvcbPod(namespace, *targetPvc)
+			//pvcbPod := buildPvcbPod(namespace, *targetPvc)
 
-			pvcbPod, err = clientset.CoreV1().Pods(namespace).Create(context.TODO(), pvcbPod, metav1.CreateOptions{})
+			// pvcbPod, err = clientset.CoreV1().Pods(namespace).Create(context.TODO(), pvcbPod, metav1.CreateOptions{})
+			// if err != nil {
+			// 	panic(err.Error())
+			// }
+
+			pvcbJob := buildPvcbJob(namespace, *targetPvc)
+
+			pvcbJob, err = clientset.BatchV1().Jobs(namespace).Create(context.TODO(), pvcbJob, metav1.CreateOptions{})
+
+			//.Get(context.TODO(), pvcbJob.GetObjectMeta().GetName(), metav1.GetOptions{})
+
 			if err != nil {
-				panic(err.Error())
+				panic(err)
 			}
 
-			fmt.Printf("Pod %s created\n", pvcbPod.ObjectMeta.Name)
+			fmt.Printf("Job %s scheduled.\n", pvcbJob.ObjectMeta.Name)
 
 			timeout := 30
 
-			for pvcbPod.Status.Phase != corev1.PodRunning && timeout > 0 {
-				fmt.Printf("Waiting for pod. Status: %s\n", pvcbPod.Status.Phase)
+			for {
+				pvcbJob, err = clientset.BatchV1().Jobs(namespace).Get(context.TODO(), pvcbJob.GetObjectMeta().GetName(), metav1.GetOptions{})
 
-				pvcbPod, err = clientset.CoreV1().Pods(namespace).Get(context.TODO(), pvcbPod.Name, metav1.GetOptions{})
 				if err != nil {
 					panic(err.Error())
 				}
 
+				if pvcbJob.Status.Active > 0 {
+					fmt.Printf("Job is running \n")
+					break
+				}
+
+				fmt.Printf("Not started yet")
 				time.Sleep(time.Second)
-				timeout--
+
 			}
 
 			if timeout == 0 {
@@ -126,12 +140,27 @@ func main() {
 
 			fmt.Printf("Pod started up ")
 
+			//Find created pod
+			podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+				LabelSelector: "job-label=" + pvcbJob.Name,
+			})
+
+			if err != nil {
+				panic(err.Error())
+			}
+
+			if len(podList.Items) != 1 {
+				panic("Didn't find one pod, handle this later")
+			}
+
+			pod := podList.Items[0]
+
 			//cmd := []string{"/bin/sh"}
 
 			req := clientset.CoreV1().RESTClient().
 				Post().
 				Resource("pods").
-				Name(pvcbPod.Name).
+				Name(pod.Name).
 				Namespace(namespace).
 				SubResource("exec").
 				Param("stdin", "true").
@@ -164,7 +193,7 @@ func main() {
 			}
 
 			deletePolicy := metav1.DeletePropagationForeground
-			err = clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pvcbPod.Name, metav1.DeleteOptions{
+			err = clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pvcbJob.Name, metav1.DeleteOptions{
 				PropagationPolicy: &deletePolicy,
 			})
 			if err != nil {
@@ -178,54 +207,5 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
-
-}
-
-func findPodByPVC(podList corev1.PodList, pvc corev1.PersistentVolumeClaim) *corev1.Pod {
-	for _, pod := range podList.Items {
-		for _, volume := range pod.Spec.Volumes {
-			if volume.PersistentVolumeClaim != nil && volume.PersistentVolumeClaim.ClaimName == pvc.Name {
-				return &pod
-			}
-		}
-	}
-	return nil
-}
-
-func buildPvcbPod(namespace string, pvc corev1.PersistentVolumeClaim) *corev1.Pod {
-	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pvcb-edit",
-			Namespace: namespace,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "pvcb-edit",
-					Image:   "debian",
-					Command: []string{"bin/bash", "-c", "--"},
-					Args:    []string{"while true; do sleep 30; done;"},
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "target-pvc",
-							MountPath: "/mnt",
-						},
-					},
-				},
-			},
-			Volumes: []corev1.Volume{
-				{
-					Name: "target-pvc",
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: pvc.Name,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	return pod
 
 }
