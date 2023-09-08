@@ -18,12 +18,17 @@ func findPodByPVC(podList corev1.PodList, pvc corev1.PersistentVolumeClaim) *cor
 }
 
 func buildPvcbJob(namespace string, pvc corev1.PersistentVolumeClaim) *batchv1.Job {
+
+	TTLSecondsAfterFinished := new(int32)
+	*TTLSecondsAfterFinished = 10
+
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pvcb-edit-" + pvc.Name,
 			Namespace: namespace,
 		},
 		Spec: batchv1.JobSpec{
+			TTLSecondsAfterFinished: TTLSecondsAfterFinished,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "pvcb-edit",
