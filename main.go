@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/briandowns/spinner"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ssh/terminal"
 
@@ -89,9 +90,9 @@ func main() {
 			attachedPod := findPodByPVC(*nsPods, *targetPvc)
 
 			if attachedPod == nil {
-				fmt.Printf("Not attached to pod\n")
 			} else {
 				fmt.Printf("Attached to %s exiting.\n", attachedPod.Name)
+				return nil
 			}
 
 			if action == "get" {
@@ -123,6 +124,12 @@ func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string,
 	timeout := 30
 
 	// Wait 30 seconds for the Job to start.
+
+	jobSpinner := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
+	jobSpinner.Suffix = " Waiting for Job to Start\n"
+	jobSpinner.FinalMSG = "✓ Job Started\n"
+	jobSpinner.Start()
+
 	for timeout > 0 {
 		pvcbGetJob, err = clientset.BatchV1().Jobs(namespace).Get(context.TODO(), pvcbGetJob.GetObjectMeta().GetName(), metav1.GetOptions{})
 
@@ -132,10 +139,10 @@ func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string,
 
 		if pvcbGetJob.Status.Active > 0 {
 			fmt.Printf("Job is running \n")
+			jobSpinner.Stop()
 			break
 		}
 
-		fmt.Printf("Not started yet")
 		time.Sleep(time.Second)
 
 		timeout--
@@ -157,8 +164,12 @@ func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string,
 
 	pod := &podList.Items[0]
 
+	podSpinner := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
+	podSpinner.Suffix = " Waiting for Pod to Start\n"
+	podSpinner.FinalMSG = "✓ Pod Started\n"
+	podSpinner.Start()
+
 	for pod.Status.Phase != corev1.PodRunning && timeout > 0 {
-		fmt.Printf("Waiting for pod. Status: %s\n", pod.Status.Phase)
 
 		pod, err = clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{})
 		if err != nil {
@@ -169,6 +180,7 @@ func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string,
 		timeout--
 	}
 
+	podSpinner.Stop()
 	if timeout == 0 {
 		panic("Pod failed to start")
 	}
