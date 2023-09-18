@@ -167,7 +167,9 @@ func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string,
 		Param("stdout", "true").
 		Param("stderr", "true").
 		Param("tty", "true").
-		Param("command", "/bin/bash")
+		Param("command", "bash").
+		Param("command", "-c").
+		Param("command", "cd /mnt && /bin/bash")
 
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
