@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -17,31 +16,10 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/client-go/util/homedir"
 )
 
 func main() {
-
-	var kubeconfig string
-
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = filepath.Join(home, ".kube", "config")
-	} else {
-		fmt.Println("error: unable to locate kubeconfig")
-		os.Exit(1)
-	}
-
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err.Error())
-	}
 
 	var namespace string
 
@@ -57,50 +35,13 @@ func main() {
 				Destination: &namespace,
 			},
 		},
-		Action: func(cCtx *cli.Context) error {
+	}
 
-			if cCtx.Args().Len() == 0 {
-				fmt.Printf("Error: No action defined\n")
-				os.Exit(1)
-			}
-
-			action := cCtx.Args().Get(0)
-
-			if action != "mount" && action != "unmount" && action != "get" && action != "archive" {
-				fmt.Printf("%s is not a valid action\n", action)
-				os.Exit(1)
-			}
-
-			targetPvcName := cCtx.Args().Get(1)
-
-			if targetPvcName == "" {
-				fmt.Printf("Error: No PVC defined\n")
-				os.Exit(1)
-			}
-
-			targetPvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.TODO(), targetPvcName, metav1.GetOptions{})
-
-			if err != nil {
-				fmt.Printf("%s\n", err)
-				os.Exit(1)
-			}
-
-			nsPods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
-
-			attachedPod := findPodByPVC(*nsPods, *targetPvc)
-
-			if attachedPod == nil {
-			} else {
-				fmt.Printf("Attached to %s exiting.\n", attachedPod.Name)
-				return nil
-			}
-
-			if action == "get" {
-				get(clientset, config, namespace, *targetPvc)
-			}
-
-			return nil
-
+	app.Commands = []*cli.Command{
+		{
+			Name:   "get",
+			Usage:  "Open a terminal with the PVC mounted",
+			Action: getCommand,
 		},
 	}
 
@@ -108,6 +49,37 @@ func main() {
 		log.Fatal(err)
 	}
 
+}
+
+func getCommand(c *cli.Context) error {
+
+	if c.Args().Len() == 0 {
+		return cli.NewExitError("ERROR: No PVC Defined", 1)
+	}
+
+	clientset, config := getClientSetFromKubeconfig()
+
+	targetPvcName := c.Args().Get(0)
+
+	targetPvc, err := clientset.CoreV1().PersistentVolumeClaims(c.String("namespace")).Get(context.TODO(), targetPvcName, metav1.GetOptions{})
+
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
+
+	nsPods, err := clientset.CoreV1().Pods(c.String("namespace")).List(context.TODO(), metav1.ListOptions{})
+
+	attachedPod := findPodByPVC(*nsPods, *targetPvc)
+
+	if attachedPod == nil {
+	} else {
+		fmt.Printf("ERROR: PVC already attached to %s exiting.\n", attachedPod.Name)
+		return nil
+	}
+
+	get(clientset, config, c.String("namespace"), *targetPvc)
+
+	return nil
 }
 
 func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string, targetPvc corev1.PersistentVolumeClaim) error {
