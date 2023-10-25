@@ -14,6 +14,11 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
+func getPodController(clientset *kubernetes.Clientset, namespace string, pod corev1.Pod) (interface{}, error) {
+
+	return nil, nil
+}
+
 // Finds if a pod that attached to a PVC
 func findPodByPVC(podList corev1.PodList, pvc corev1.PersistentVolumeClaim) *corev1.Pod {
 	for _, pod := range podList.Items {
@@ -97,5 +102,4 @@ func getClientSetFromKubeconfig() (*kubernetes.Clientset, *rest.Config) {
 	}
 
 	return clientset, config
-
 }

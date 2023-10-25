@@ -60,7 +60,6 @@ func getCommand(c *cli.Context) error {
 	clientset, config := getClientSetFromKubeconfig()
 
 	targetPvcName := c.Args().Get(0)
-
 	targetPvc, err := clientset.CoreV1().PersistentVolumeClaims(c.String("namespace")).Get(context.TODO(), targetPvcName, metav1.GetOptions{})
 
 	if err != nil {
@@ -68,7 +67,6 @@ func getCommand(c *cli.Context) error {
 	}
 
 	nsPods, err := clientset.CoreV1().Pods(c.String("namespace")).List(context.TODO(), metav1.ListOptions{})
-
 	attachedPod := findPodByPVC(*nsPods, *targetPvc)
 
 	if attachedPod == nil {
