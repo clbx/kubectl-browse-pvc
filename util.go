@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,9 +16,40 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-func getPodController(clientset *kubernetes.Clientset, namespace string, pod corev1.Pod) (interface{}, error) {
+// Gets the controller that controls a pod to scale it down.
+func getPodController(clientset *kubernetes.Clientset, config *rest.Config, namespace string, pod corev1.Pod) (interface{}, error) {
 
-	return nil, nil
+	fmt.Printf("%+v\n", &pod.OwnerReferences)
+
+	if len(pod.OwnerReferences) == 0 {
+		return nil, errors.New("No Owner References Found")
+	}
+
+	if len(pod.OwnerReferences) > 1 {
+		return nil, errors.New("Unable to handle multiple owner references.")
+	}
+
+	kind := pod.OwnerReferences[0].Kind
+	name := pod.OwnerReferences[0].Name
+
+	switch kind {
+	//ReplicaSet Deployment StatefulSet DaemonSet Job CronJob
+	case "ReplicaSet":
+		return clientset.AppsV1().ReplicaSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	case "Deployment":
+		return clientset.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	case "StatefulSet":
+		return clientset.AppsV1().StatefulSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	case "DaemonSet":
+		return clientset.AppsV1().DaemonSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	case "Job":
+		return clientset.BatchV1().Jobs(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	case "CronJob":
+		return clientset.BatchV1().CronJobs(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	default:
+		return nil, errors.New("Unknown controller type")
+	}
+
 }
 
 // Finds if a pod that attached to a PVC
