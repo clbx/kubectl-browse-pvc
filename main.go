@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -78,53 +77,12 @@ func getCommand(c *cli.Context) error {
 
 	if attachedPod == nil {
 	} else {
-		fmt.Printf("PVC already attached to %s.\n", attachedPod.Name)
-		controller, err := getPodController(clientset, config, c.String("namespace"), *attachedPod)
-		if err != nil {
-			return err
-		}
-
-		var kind string
-		var name string
-
-		switch obj := controller.(type) {
-		case *appsv1.ReplicaSet:
-			fmt.Println("%s is controlled by %s %s. Scale down %s? (y/n)\n", attachedPod.Name,obj.Kind,obj.Name,obj.Name)
-			//scaleReplicaSet()
-		case *appsv1.Deployment:
-			fmt.Println("%s is controlled by %s %s. Scale down %s? (y/n)\n", attachedPod.Name,obj.Kind,obj.Name,obj.Name)
-			//scaleDeployment()
-		case *appsv1.StatefulSet:
-			fmt.Println("%s is controlled by %s %s. Scale down %s? (y/n)\n", attachedPod.Name,obj.Kind,obj.Name,obj.Name)
-			//scaleStatefulSet()
-		case *appsv1.DaemonSet:
-			fmt.Println("%s is controlled by %s %s. Scale down %s? (y/n)\n", attachedPod.Name,obj.Kind,obj.Name,obj.Name)
-			//scaleDaemonSet()
-		case *appsv1.Job:
-			fmt.Println("%s is controlled by %s %s. Scale down %s? (y/n)\n", attachedPod.Name,obj.Kind,obj.Name,obj.Name)
-			//scaleJob()
-		case *appsv1.CronJob:
-			fmt.Println("%s is controlled by %s %s. Scale down %s? (y/n)\n", attachedPod.Name,obj.Kind,obj.Name,obj.Name)
-			//scaleCronJob()
-		default:
-			return errors.New("Unknown Controller Type")
-
-
-		//fmt.Printf("%s is controlled by %s %s. Scale down s? (y/n)\n", attachedPod.Name, controller, controller.Name)
-
-		// var resp string
-		// fmt.Scanln(&resp)
-		// if resp == "n" {
-		// 	fmt.Printf("Won't scale down NAME. Exiting\n")
-		// }
-		// if resp != "y" {
-		// 	fmt.Printf("Unknown Response. Exiting\n")
-		// }
-
-		return nil
+		err = handleScaleDown(attachedPod, clientset)
 	}
 
-	get(clientset, config, c.String("namespace"), *targetPvc)
+	if err != nil {
+		get(clientset, config, c.String("namespace"), *targetPvc)
+	}
 
 	return nil
 }
@@ -205,8 +163,7 @@ func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string,
 	}
 
 	req := clientset.CoreV1().RESTClient().
-		Post().
-		Resource("pods").
+		Post().Resource("pods").
 		Name(pod.Name).
 		Namespace(namespace).
 		SubResource("exec").

@@ -17,9 +17,7 @@ import (
 )
 
 // Gets the controller that controls a pod to scale it down.
-func getPodController(clientset *kubernetes.Clientset, config *rest.Config, namespace string, pod corev1.Pod) (interface{}, error) {
-
-	fmt.Printf("%+v\n", &pod.OwnerReferences)
+func getPodController(clientset *kubernetes.Clientset, pod corev1.Pod) (interface{}, error) {
 
 	if len(pod.OwnerReferences) == 0 {
 		return nil, errors.New("No Owner References Found")
@@ -35,17 +33,17 @@ func getPodController(clientset *kubernetes.Clientset, config *rest.Config, name
 	switch kind {
 	//ReplicaSet Deployment StatefulSet DaemonSet Job CronJob
 	case "ReplicaSet":
-		return clientset.AppsV1().ReplicaSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		return clientset.AppsV1().ReplicaSets(pod.Namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	case "Deployment":
-		return clientset.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		return clientset.AppsV1().Deployments(pod.Namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	case "StatefulSet":
-		return clientset.AppsV1().StatefulSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		return clientset.AppsV1().StatefulSets(pod.Namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	case "DaemonSet":
-		return clientset.AppsV1().DaemonSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		return clientset.AppsV1().DaemonSets(pod.Namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	case "Job":
-		return clientset.BatchV1().Jobs(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		return clientset.BatchV1().Jobs(pod.Namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	case "CronJob":
-		return clientset.BatchV1().CronJobs(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		return clientset.BatchV1().CronJobs(pod.Namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	default:
 		return nil, errors.New("Unknown controller type")
 	}
