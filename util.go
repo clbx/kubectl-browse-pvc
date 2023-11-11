@@ -27,7 +27,7 @@ func findPodByPVC(podList corev1.PodList, pvc corev1.PersistentVolumeClaim) *cor
 }
 
 // Returns a job for the get command.
-func buildPvcbGetJob(namespace string, pvc corev1.PersistentVolumeClaim) *batchv1.Job {
+func buildPvcbGetJob(namespace string, image string, pvc corev1.PersistentVolumeClaim) *batchv1.Job {
 
 	TTLSecondsAfterFinished := new(int32)
 	*TTLSecondsAfterFinished = 10
@@ -48,7 +48,7 @@ func buildPvcbGetJob(namespace string, pvc corev1.PersistentVolumeClaim) *batchv
 					Containers: []corev1.Container{
 						{
 							Name:    "pvcb-edit",
-							Image:   "clbx/pvcb-edit",
+							Image:   image,
 							Command: []string{"/bin/bash", "-c", "--"},
 							Args:    []string{"/entrypoint.sh"},
 							VolumeMounts: []corev1.VolumeMount{

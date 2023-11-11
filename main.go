@@ -14,8 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -48,14 +46,6 @@ func main() {
 		Action: getCommand,
 	}
 
-	// app.Commands = []*cli.Command{
-	// 	{
-	// 		Name:   "get",
-	// 		Usage:  "Open a terminal with the PVC mounted",
-	// 		Action: getCommand,
-	// 	},
-	// }
-
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
@@ -65,12 +55,11 @@ func main() {
 func getCommand(c *cli.Context) error {
 
 	if c.Args().Len() == 0 {
-		return cli.NewExitError("ERROR: No PVC Defined", 1)
+		cli.ShowAppHelp(c)
+		return cli.NewExitError("", 1)
 	}
 
 	clientset, config := getClientSetFromKubeconfig()
-
-	fmt.Printf("Namespace %s", c.String("namespace"))
 
 	targetPvcName := c.Args().Get(0)
 	targetPvc, err := clientset.CoreV1().PersistentVolumeClaims(c.String("namespace")).Get(context.TODO(), targetPvcName, metav1.GetOptions{})
@@ -84,44 +73,29 @@ func getCommand(c *cli.Context) error {
 
 	if attachedPod == nil {
 	} else {
-		return cli.NewExitError("ERROR: PVC attached to Pod", 1)
+		errMsg := fmt.Sprintf("PVC attached to pod %s", attachedPod.Name)
+		return cli.NewExitError(errMsg, 1)
 	}
 
-	get(clientset, config, c.String("namespace"), *targetPvc)
-
-	return nil
-}
-
-func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string, targetPvc corev1.PersistentVolumeClaim) error {
-
 	// Build the Job
-	pvcbGetJob := buildPvcbGetJob(namespace, targetPvc)
+	pvcbGetJob := buildPvcbGetJob(c.String("namespace"), c.String("image"), *targetPvc)
 	// Create Job
-	pvcbGetJob, err := clientset.BatchV1().Jobs(namespace).Create(context.TODO(), pvcbGetJob, metav1.CreateOptions{})
+	pvcbGetJob, err = clientset.BatchV1().Jobs(c.String("namespace")).Create(context.TODO(), pvcbGetJob, metav1.CreateOptions{})
 
 	if err != nil {
-		panic(err)
+		return cli.NewExitError(err, 1)
 	}
 
 	timeout := 30
 
-	// Wait 30 seconds for the Job to start.
-
-	jobSpinner := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
-	jobSpinner.Suffix = " Waiting for Job to Start\n"
-	jobSpinner.FinalMSG = "✓ Job Started\n"
-	jobSpinner.Start()
-
 	for timeout > 0 {
-		pvcbGetJob, err = clientset.BatchV1().Jobs(namespace).Get(context.TODO(), pvcbGetJob.GetObjectMeta().GetName(), metav1.GetOptions{})
+		pvcbGetJob, err = clientset.BatchV1().Jobs(c.String("namespace")).Get(context.TODO(), pvcbGetJob.GetObjectMeta().GetName(), metav1.GetOptions{})
 
 		if err != nil {
-			panic(err.Error())
+			return cli.NewExitError(err, 1)
 		}
 
 		if pvcbGetJob.Status.Active > 0 {
-			fmt.Printf("Job is running \n")
-			jobSpinner.Stop()
 			break
 		}
 
@@ -131,17 +105,17 @@ func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string,
 	}
 
 	// Find the created pod.
-	podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+	podList, err := clientset.CoreV1().Pods(c.String("namespace")).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "job-name=" + pvcbGetJob.Name,
 	})
 
 	if err != nil {
-		panic(err.Error())
+		return cli.NewExitError(err, 1)
 	}
 
 	if len(podList.Items) != 1 {
 		fmt.Printf("%d\n", len(podList.Items))
-		panic("Found more or less than one pod")
+		return cli.NewExitError("Found an unexpected number of controllers, this shouldn't happen.", 1)
 	}
 
 	pod := &podList.Items[0]
@@ -153,9 +127,9 @@ func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string,
 
 	for pod.Status.Phase != corev1.PodRunning && timeout > 0 {
 
-		pod, err = clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{})
+		pod, err = clientset.CoreV1().Pods(c.String("namespace")).Get(context.TODO(), pod.Name, metav1.GetOptions{})
 		if err != nil {
-			panic(err.Error())
+			return cli.NewExitError(err, 1)
 		}
 
 		time.Sleep(time.Second)
@@ -164,13 +138,13 @@ func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string,
 
 	podSpinner.Stop()
 	if timeout == 0 {
-		panic("Pod failed to start")
+		return cli.NewExitError("Pod failed to start", 1)
 	}
 
 	req := clientset.CoreV1().RESTClient().
 		Post().Resource("pods").
 		Name(pod.Name).
-		Namespace(namespace).
+		Namespace(c.String("namespace")).
 		SubResource("exec").
 		Param("stdin", "true").
 		Param("stdout", "true").
@@ -182,12 +156,12 @@ func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string,
 
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
-		panic(err.Error())
+		return cli.NewExitError(err, 1)
 	}
 
 	oldState, err := terminal.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
-		panic(err)
+		return cli.NewExitError(err, 1)
 	}
 
 	defer terminal.Restore(int(os.Stdin.Fd()), oldState)
@@ -200,7 +174,7 @@ func get(clientset *kubernetes.Clientset, config *rest.Config, namespace string,
 	})
 
 	if err != nil {
-		panic(err.Error())
+		return cli.NewExitError(err, 1)
 	}
 
 	return nil
