@@ -22,9 +22,10 @@ import (
 func main() {
 
 	var namespace string
+	var image string
 
 	app := &cli.App{
-		Name:  "pvcb",
+		Name:  "kubectl browse",
 		Usage: "Kubernetes PVC Browser",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -35,21 +36,25 @@ func main() {
 				Aliases:     []string{"n"},
 				Destination: &namespace,
 			},
-			&cli.BoolFlag{
-				Name:    "scale",
-				Aliases: []string{"s"},
-				Usage:   "Scale down a pod controller without asking",
+			&cli.StringFlag{
+				Name: "image",
+				//use the pvcb image
+				Value:       "clbx/pvcb-edit",
+				Usage:       "Image to mount job to",
+				Aliases:     []string{"i"},
+				Destination: &image,
 			},
 		},
+		Action: getCommand,
 	}
 
-	app.Commands = []*cli.Command{
-		{
-			Name:   "get",
-			Usage:  "Open a terminal with the PVC mounted",
-			Action: getCommand,
-		},
-	}
+	// app.Commands = []*cli.Command{
+	// 	{
+	// 		Name:   "get",
+	// 		Usage:  "Open a terminal with the PVC mounted",
+	// 		Action: getCommand,
+	// 	},
+	// }
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
@@ -65,6 +70,8 @@ func getCommand(c *cli.Context) error {
 
 	clientset, config := getClientSetFromKubeconfig()
 
+	fmt.Printf("Namespace %s", c.String("namespace"))
+
 	targetPvcName := c.Args().Get(0)
 	targetPvc, err := clientset.CoreV1().PersistentVolumeClaims(c.String("namespace")).Get(context.TODO(), targetPvcName, metav1.GetOptions{})
 
@@ -77,12 +84,10 @@ func getCommand(c *cli.Context) error {
 
 	if attachedPod == nil {
 	} else {
-		err = handleScaleDown(attachedPod, clientset)
+		return cli.NewExitError("ERROR: PVC attached to Pod", 1)
 	}
 
-	if err != nil {
-		get(clientset, config, c.String("namespace"), *targetPvc)
-	}
+	get(clientset, config, c.String("namespace"), *targetPvc)
 
 	return nil
 }
