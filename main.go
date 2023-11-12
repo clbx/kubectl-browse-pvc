@@ -23,7 +23,7 @@ func main() {
 	var image string
 
 	app := &cli.App{
-		Name:  "kubectl browse",
+		Name:  "kubectl browse-pvc",
 		Usage: "Kubernetes PVC Browser",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -36,7 +36,7 @@ func main() {
 			},
 			&cli.StringFlag{
 				Name: "image",
-				//use the pvcb image
+				//use the pvc browser edit container
 				Value:       "clbx/pvcb-edit",
 				Usage:       "Image to mount job to",
 				Aliases:     []string{"i"},

@@ -1,4 +1,4 @@
-module github.com/clbx/kubectl-browse
+module github.com/clbx/kubectl-browse-pvc
 
 go 1.20
 

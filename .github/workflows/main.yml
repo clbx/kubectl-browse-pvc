@@ -23,9 +23,9 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v3.1.3
       with:
-        name: kubectl-browse-darwin
+        name: kubectl-browse-pvc-darwin
         path: |
-          ./kubectl-browse
+          ./kubectl-browse-pvc
   build-linux:
     runs-on: ubuntu-latest
     steps:
@@ -43,9 +43,9 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v3.1.3
       with:
-        name: kubectl-browse-linux
+        name: kubectl-browse-pvc-linux
         path: |
-          ./kubectl-browse
+          ./kubectl-browse-pvc
 
 
 

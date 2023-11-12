@@ -1,4 +1,4 @@
-# kubectl-browser
+# kubectl-browse-pvc
 Kubectl plugin to browse a Kubernetes PVC from the command line
 
 **This tool is WIP**
