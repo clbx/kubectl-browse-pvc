@@ -1,4 +1,4 @@
-name: Build kubectl-browser
+name: Build kubectl-browse-pvc
 
 on:
   push:
