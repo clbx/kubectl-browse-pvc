@@ -25,7 +25,7 @@ func main() {
 	var image string
 
 	app := &cli.App{
-		Name:  "kubectl browse",
+		Name:  "kubectl browse-pvc",
 		Usage: "Kubernetes PVC Browser",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
