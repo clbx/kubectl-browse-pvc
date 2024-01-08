@@ -25,7 +25,7 @@ func main() {
 	var image string
 
 	app := &cli.App{
-		Name:  "kubectl browse-pvc",
+		Name:  "kubectl browse",
 		Usage: "Kubernetes PVC Browser",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -73,10 +73,21 @@ func getCommand(c *cli.Context) error {
 	nsPods, err := clientset.CoreV1().Pods(c.String("namespace")).List(context.TODO(), metav1.ListOptions{})
 	attachedPod := findPodByPVC(*nsPods, *targetPvc)
 
+	manyAccessMode := false
+	for _, mode := range targetPvc.Spec.AccessModes {
+		if mode == corev1.ReadWriteMany || mode == corev1.ReadOnlyMany {
+			manyAccessMode = true
+			break
+		}
+	}
+
 	if attachedPod == nil {
 	} else {
-		errMsg := fmt.Sprintf("PVC attached to pod %s", attachedPod.Name)
-		return cli.NewExitError(errMsg, 1)
+		if manyAccessMode {
+		} else {
+			errMsg := fmt.Sprintf("PVC attached to pod %s", attachedPod.Name)
+			return cli.NewExitError(errMsg, 1)
+		}
 	}
 
 	// Build the Job
