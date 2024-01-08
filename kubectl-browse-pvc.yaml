@@ -13,7 +13,7 @@ spec:
   - selector:
       matchLabels:
         os: darwin
-    uri: https://github.com/clbx/kubectl-browse-pvc/releases/download/v0.2/kubectl-browse-pvc-darwin.zip
+    uri: https://github.com/clbx/kubectl-browse-pvc/releases/download/v0.3/kubectl-browse-pvc-darwin.zip
     files:
     - from: "*"
       to: "."
@@ -23,7 +23,7 @@ spec:
       matchLabels:
         os: linux
         arch: amd64
-    uri: https://github.com/clbx/kubectl-browse-pvc/releases/download/v0.2/kubectl-browse-pvc-linux.zip
+    uri: https://github.com/clbx/kubectl-browse-pvc/releases/download/v0.3/kubectl-browse-pvc-linux.zip
     files:
     - from: "*"
       to: "."
