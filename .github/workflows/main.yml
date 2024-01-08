@@ -25,7 +25,7 @@ jobs:
       with:
         name: kubectl-browse-pvc-darwin
         path: |
-          ./kubectl-browse-pvc
+          ./kubectl-browse_pvc
   build-linux:
     runs-on: ubuntu-latest
     steps:
@@ -45,7 +45,7 @@ jobs:
       with:
         name: kubectl-browse-pvc-linux
         path: |
-          ./kubectl-browse-pvc
+          ./kubectl-browse_pvc
 
 
 
