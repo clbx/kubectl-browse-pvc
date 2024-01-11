@@ -1,6 +1,8 @@
 # kubectl-browse-pvc
 Kubectl plugin to browse a Kubernetes PVC from the command line
 
+I constantly found myself spinning up dummy pods to exec into them so I could browse a PVC, this takes a few steps out of creating dummy pods to check out the contents of a PVC. 
+
 Install via krew
 ```
 kubectl krew install browse-pvc
