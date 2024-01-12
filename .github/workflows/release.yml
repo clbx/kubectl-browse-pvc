@@ -65,5 +65,5 @@ jobs:
       id: create_release
       uses: ncipollo/release-action@v1
       with:
-        artifacts: "kubectl-browse-pvc-darwin.zip,kubectl-browse-pvc-linux.zip"
+        artifacts: "kubectl-browse-pvc-darwin,kubectl-browse-pvc-linux"
 
