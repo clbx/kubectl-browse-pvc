@@ -61,10 +61,20 @@ jobs:
     - name: Download Artifacts
       uses: actions/download-artifact@v4
 
+    - name: Zip linux
+      uses: montudor/action-zip@v1
+      with:
+        args: zip -qq -r kubectl-browse-pvc-linux.zip -d kubectl-browse-pvc-linux
+
+    - name: Zip darwin
+      uses: montudor/action-zip@v1
+      with:
+        args: zip -qq -r kubectl-browse-pvc-darwin.zip -d kubectl-browse-pvc-darwin
+
 
     - name: Create Release
       id: create_release
       uses: ncipollo/release-action@v1
       with:
-        artifacts: "kubectl-browse-pvc-darwin,kubectl-browse-pvc-linux"
+        artifacts: "kubectl-browse-pvc-darwin.zip,kubectl-browse-pvc-linux.zip"
 
