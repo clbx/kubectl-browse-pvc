@@ -84,6 +84,6 @@ jobs:
     - name: Check out Code
       uses: actions/checkout@v4.0.0
 
-    # - name: Update Krew
-    #   uses: rajatjindal/krew-release-bot@v0.0.46
+    - name: Update Krew
+      uses: rajatjindal/krew-release-bot@v0.0.46
 
