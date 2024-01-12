@@ -1,0 +1,91 @@
+name: release
+on:
+  push:
+    tags:
+    - "v*.*.*"
+jobs:
+  build-darwin:
+    runs-on: macos-latest
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v4.1.0
+      with:
+        go-version: "1.20.5"
+
+    - name: Check out Code
+      uses: actions/checkout@v4.0.0
+
+    - name: Build
+      run: go build -v -o kubectl-browse-pvc .
+
+    - name: Fix permissions
+      run: chmod +x ./kubectl-browse-pvc
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3.1.3
+      with:
+        name: kubectl-browse-pvc-darwin
+        path: |
+          ./kubectl-browse-pvc
+          LICENSE
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v4.1.0
+      with:
+        go-version: "1.20.5"
+
+    - name: Check out Code
+      uses: actions/checkout@v4.0.0
+
+    - name: Build
+      run: go build -v -o kubectl-browse-pvc .
+
+    - name: Fix permissions
+      run: chmod +x ./kubectl-browse-pvc
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3.1.3
+      with:
+        name: kubectl-browse-pvc-linux
+        path: |
+          ./kubectl-browse-pvc
+          LICENSE
+  create-release:
+    runs-on: ubuntu-latest
+    needs: [build-darwin, build-linux]
+    steps:
+    - name: Download Artifacts
+      uses: actions/download-artifact@latest
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Darwin artifact to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./kubectl-browse-pvc-darwin.zip
+        asset_name: kubectl-browse-pvc-darwin.zip
+        asset_content_type: application/zip
+
+    - name: Upload Linux artifact to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./kubectl-browse-pvc-linux.zip
+        asset_name: kubectl-browse-pvc-linux.zip
+        asset_content_type: application/zip

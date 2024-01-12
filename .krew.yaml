@@ -1,0 +1,24 @@
+# Krew Manifest
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: browse-pvc
+spec:
+  version: "{{ .TagName }}"
+  homepage: https://github.com/clbx/kubectl-browse-pvc
+  shortDescription: "Browse PVC contents from the command line."
+  description: "Browse PVCs from the command line. Creates a job thats binds an unbound PVC and execs into it."
+  platforms:
+  # macOS
+  - selector:
+      matchLabels:
+        os: darwin
+    {{addURIAndSha "https://github.com/clbx/kubectl-browse-pvc/releases/download/{{ .TagName }}/kubectl-browse-pvc-darwin.zip" .TagName }}
+    bin: kubectl-browse-pvc
+  # linux
+  - selector:
+      matchLabels:
+        os: linux
+        arch: amd64
+    {{addURIAndSha "https://github.com/clbx/kubectl-browse-pvc/releases/download/{{ .TagName }}/kubectl-browse-pvc-linux.zip" .TagName }}
+    bin: kubectl-browse-pvc
