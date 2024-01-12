@@ -65,10 +65,10 @@ jobs:
       run: ls -R
 
     - name: Fix permissions linux
-      run: kubectl-browse-pvc-linux/kubectl-browse-pvc
+      run: chmod +x kubectl-browse-pvc-linux/kubectl-browse-pvc
 
     - name: Fix permissions darwin
-      run: kubectl-browse-pvc-darwin/kubectl-browse-pvc
+      run: chmod +x kubectl-browse-pvc-darwin/kubectl-browse-pvc
 
     - name: Zip linux
       uses: montudor/action-zip@v1
