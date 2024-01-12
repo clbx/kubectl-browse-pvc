@@ -57,7 +57,7 @@ jobs:
     needs: [build-darwin, build-linux]
     steps:
     - name: Download Artifacts
-      uses: actions/download-artifact@latest
+      uses: actions/download-artifact@v4
 
     - name: Create Release
       id: create_release
