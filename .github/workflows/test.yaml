@@ -1,4 +1,4 @@
-name: Build kubectl-browse-pvc
+name: Test
 
 on:
   push:
