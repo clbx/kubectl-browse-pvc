@@ -81,3 +81,6 @@ jobs:
         artifacts: "kubectl-browse-pvc-darwin.zip,kubectl-browse-pvc-linux.zip"
         artifactErrorsFailBuild: true
 
+    - name: Update Krew
+      uses: rajatjindal/krew-release-bot@v0.0.46
+
