@@ -1,0 +1,38 @@
+# Need to configure kind rwx first
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: rwx-bound-pvc
+# spec:
+#   accessModes:
+#   - ReadWriteMany
+#   resources:
+#     requests:
+#       storage: 2Gi
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: nginx-deployment
+#   labels:
+#     app: nginx
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: nginx
+#   template:
+#     metadata:
+#       labels:
+#         app: nginx
+#     spec:
+#       containers:
+#       - name: nginx
+#         image: nginx:latest
+#         volumeMounts:
+#         - name: rwx-volume
+#           mountPath: /usr/share/nginx/html
+#       volumes:
+#       - name: rwx-volume
+#         persistentVolumeClaim:
+#           claimName: rwx-test

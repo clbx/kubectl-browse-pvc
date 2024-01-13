@@ -1,0 +1,12 @@
+# Need to configure kind rwx first
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rwx-test
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: thisStorageClassDoesntExist
