@@ -79,7 +79,9 @@ func buildPvcbGetJob(namespace string, image string, pvc corev1.PersistentVolume
 func getClientSetFromKubeconfig() (*kubernetes.Clientset, *rest.Config) {
 	var kubeconfig string
 
-	if home := homedir.HomeDir(); home != "" {
+	if configFromEnv := os.Getenv("KUBECONFIG"); configFromEnv != "" {
+		kubeconfig = configFromEnv
+	} else if home := homedir.HomeDir(); home != "" {
 		kubeconfig = filepath.Join(home, ".kube", "config")
 	} else {
 		fmt.Println("error: unable to locate kubeconfig")
