@@ -4,7 +4,7 @@ permissions:
 on:
   push:
     tags:
-    - "v*.*.*"
+    - "v*"
 jobs:
   build-darwin:
     runs-on: macos-latest
@@ -87,6 +87,11 @@ jobs:
         artifacts: "kubectl-browse-pvc-darwin.zip,kubectl-browse-pvc-linux.zip"
         artifactErrorsFailBuild: true
 
+  publish-to-krew:
+    if: "!contains(github.reg, 'rc')"
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    steps:
     - name: Check out Code
       uses: actions/checkout@v4.0.0
 
