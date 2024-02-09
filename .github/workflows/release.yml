@@ -6,55 +6,6 @@ on:
     tags:
     - "v*"
 jobs:
-  build-darwin:
-    runs-on: macos-latest
-    steps:
-    - name: Set up Go
-      uses: actions/setup-go@v4.1.0
-      with:
-        go-version: "1.20.5"
-
-    - name: Check out Code
-      uses: actions/checkout@v4.0.0
-
-    - name: Build
-      run: go build -v -o kubectl-browse-pvc .
-
-    - name: Fix permissions
-      run: chmod +x ./kubectl-browse-pvc
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: kubectl-browse-pvc-darwin
-        path: |
-          ./kubectl-browse-pvc
-          LICENSE
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Set up Go
-      uses: actions/setup-go@v4.1.0
-      with:
-        go-version: "1.20.5"
-
-    - name: Check out Code
-      uses: actions/checkout@v4.0.0
-
-    - name: Build
-      run: go build -v -o kubectl-browse-pvc .
-
-    - name: Fix permissions
-      run: chmod +x ./kubectl-browse-pvc
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: kubectl-browse-pvc-linux
-        path: |
-          ./kubectl-browse-pvc
-          LICENSE
-
   create-release:
     if: "!contains(github.ref, 'rc')"
     runs-on: ubuntu-latest
