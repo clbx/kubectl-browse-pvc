@@ -88,7 +88,7 @@ jobs:
         artifactErrorsFailBuild: true
 
   publish-to-krew:
-    if: "!contains(github.reg, 'rc')"
+    if: "!contains(github.ref, 'rc')"
     runs-on: ubuntu-latest
     needs: [create-release]
     steps:
