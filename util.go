@@ -1,17 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
 )
 
 // Finds if a pod that attached to a PVC
@@ -74,29 +66,4 @@ func buildPvcbGetJob(namespace string, image string, pvc corev1.PersistentVolume
 		},
 	}
 	return job
-}
-
-func getClientSetFromKubeconfig() (*kubernetes.Clientset, *rest.Config) {
-	var kubeconfig string
-
-	if configFromEnv := os.Getenv("KUBECONFIG"); configFromEnv != "" {
-		kubeconfig = configFromEnv
-	} else if home := homedir.HomeDir(); home != "" {
-		kubeconfig = filepath.Join(home, ".kube", "config")
-	} else {
-		fmt.Println("error: unable to locate kubeconfig")
-		os.Exit(1)
-	}
-
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return clientset, config
 }
