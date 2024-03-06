@@ -4,10 +4,57 @@ permissions:
 on:
   push:
     tags:
-    - "v*"
+    - "v*.*.*"
 jobs:
+  build-darwin:
+    runs-on: macos-latest
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v4.1.0
+      with:
+        go-version: "1.20.5"
+
+    - name: Check out Code
+      uses: actions/checkout@v4.0.0
+
+    - name: Build
+      run: go build -v -o kubectl-browse-pvc .
+
+    - name: Fix permissions
+      run: chmod +x ./kubectl-browse-pvc
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: kubectl-browse-pvc-darwin
+        path: |
+          ./kubectl-browse-pvc
+          LICENSE
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v4.1.0
+      with:
+        go-version: "1.20.5"
+
+    - name: Check out Code
+      uses: actions/checkout@v4.0.0
+
+    - name: Build
+      run: go build -v -o kubectl-browse-pvc .
+
+    - name: Fix permissions
+      run: chmod +x ./kubectl-browse-pvc
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: kubectl-browse-pvc-linux
+        path: |
+          ./kubectl-browse-pvc
+          LICENSE
   create-release:
-    if: "!contains(github.ref, 'rc')"
     runs-on: ubuntu-latest
     needs: [build-darwin, build-linux]
     steps:
@@ -31,7 +78,7 @@ jobs:
     - name: Zip darwin
       uses: montudor/action-zip@v1
       with:
-        args: zip -j kubectl-browse-pvc-darwin.zip kubectl-browse-pvc-darwin/kubectl-browse-pvc kubectl-browse-pvc-darwin/LICENSE"
+        args: zip -j kubectl-browse-pvc-darwin.zip kubectl-browse-pvc-darwin/kubectl-browse-pvc kubectl-browse-pvc-darwin/LICENSE
 
     - name: Create Release
       id: create_release
@@ -40,50 +87,8 @@ jobs:
         artifacts: "kubectl-browse-pvc-darwin.zip,kubectl-browse-pvc-linux.zip"
         artifactErrorsFailBuild: true
 
-  create-release-candidate:
-    if: "contains(github.ref, 'rc')"
-    runs-on: ubuntu-latest
-    needs: [build-darwin, build-linux]
-    steps:
-
-    - name: Download Artifacts
-      uses: actions/download-artifact@v4
-
-    - name: ls
-      run: ls -R
-
-    - name: Fix permissions linux
-      run: chmod +x kubectl-browse-pvc-linux/kubectl-browse-pvc
-
-    - name: Fix permissions darwin
-      run: chmod +x kubectl-browse-pvc-darwin/kubectl-browse-pvc
-
-    - name: Zip linux
-      uses: montudor/action-zip@v1
-      with:
-        args: zip -j kubectl-browse-pvc-linux.zip kubectl-browse-pvc-linux/kubectl-browse-pvc kubectl-browse-pvc-linux/LICENSE
-
-    - name: Zip darwin
-      uses: montudor/action-zip@v1
-      with:
-        args: zip -j kubectl-browse-pvc-darwin.zip kubectl-browse-pvc-darwin/kubectl-browse-pvc kubectl-browse-pvc-darwin/LICENSE"
-
-    - name: Create Release Candidate
-      id: create_release_candidate
-      uses: ncipollo/release-action@v1
-      with:
-        artifacts: "kubectl-browse-pvc-darwin.zip,kubectl-browse-pvc-linux.zip"
-        artifactErrorsFailBuild: true
-        prerelease: true
-
-  publish-to-krew:
-    if: "!contains(github.ref, 'rc')"
-    runs-on: ubuntu-latest
-    needs: [create-release]
-    steps:
     - name: Check out Code
       uses: actions/checkout@v4.0.0
 
     - name: Update Krew
       uses: rajatjindal/krew-release-bot@v0.0.46
-
