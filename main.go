@@ -8,69 +8,66 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
 	"k8s.io/client-go/tools/remotecommand"
 )
 
+var image string
+
 func main() {
 
-	var namespace string
-	var image string
+	var kubeConfigFlags = genericclioptions.NewConfigFlags(true)
 
-	app := &cli.App{
-		Name:  "kubectl browse-pvc",
-		Usage: "Kubernetes PVC Browser",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name: "namespace",
-				// Set the default to the current context instead of default
-				Value:       "default",
-				Usage:       "Specify namespace of ",
-				Aliases:     []string{"n"},
-				Destination: &namespace,
-			},
-			&cli.StringFlag{
-				Name: "image",
-				//use the pvc browser edit container
-				Value:       "clbx/pvcb-edit",
-				Usage:       "Image to mount job to",
-				Aliases:     []string{"i"},
-				Destination: &image,
-			},
+	var rootCmd = &cobra.Command{
+		Use:   "kubectl-browse-pvc",
+		Short: "Kubernetes PVC Browser",
+		Long:  `Kubernetes PVC Browser`,
+		Args:  cobra.MinimumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			pvcName := args[0]
+			getCommand(kubeConfigFlags, pvcName)
 		},
-		Action: getCommand,
 	}
 
-	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+	rootCmd.Flags().StringVarP(&image, "image", "i", "clbx/pvcb-edit", "Image to mount job to")
+	kubeConfigFlags.AddFlags(rootCmd.Flags())
+
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatalf("Error executing command: %s\n", err)
 	}
 
 }
 
-func getCommand(c *cli.Context) error {
+func getCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName string) error {
 
-	if c.Args().Len() == 0 {
-		cli.ShowAppHelp(c)
-		return cli.NewExitError("", 1)
-	}
-
-	clientset, config := getClientSetFromKubeconfig()
-
-	targetPvcName := c.Args().Get(0)
-	targetPvc, err := clientset.CoreV1().PersistentVolumeClaims(c.String("namespace")).Get(context.TODO(), targetPvcName, metav1.GetOptions{})
-
+	config, err := kubeConfigFlags.ToRESTConfig()
 	if err != nil {
-		return cli.NewExitError(err, 1)
+		log.Fatalf("Failed to create kubernetes config: %v", err)
 	}
 
-	nsPods, err := clientset.CoreV1().Pods(c.String("namespace")).List(context.TODO(), metav1.ListOptions{})
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		log.Fatalf("Failed to create kubernetes client: %v", err)
+	}
+
+	targetPvc, err := clientset.CoreV1().PersistentVolumeClaims(*kubeConfigFlags.Namespace).Get(context.TODO(), pvcName, metav1.GetOptions{})
+	if err != nil {
+		log.Fatalf("Failed to get PVC: %v", err)
+	}
+
+	nsPods, err := clientset.CoreV1().Pods(*kubeConfigFlags.Namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		log.Fatalf("Failed to get pods: %v", err)
+	}
+
 	attachedPod := findPodByPVC(*nsPods, *targetPvc)
 
 	manyAccessMode := false
@@ -85,27 +82,26 @@ func getCommand(c *cli.Context) error {
 	} else {
 		if manyAccessMode {
 		} else {
-			errMsg := fmt.Sprintf("PVC attached to pod %s", attachedPod.Name)
-			return cli.NewExitError(errMsg, 1)
+			log.Fatalf("PVC attached to pod %s", attachedPod.Name)
 		}
 	}
 
 	// Build the Job
-	pvcbGetJob := buildPvcbGetJob(c.String("namespace"), c.String("image"), *targetPvc)
+	pvcbGetJob := buildPvcbGetJob(*kubeConfigFlags.Namespace, image, *targetPvc)
 	// Create Job
-	pvcbGetJob, err = clientset.BatchV1().Jobs(c.String("namespace")).Create(context.TODO(), pvcbGetJob, metav1.CreateOptions{})
+	pvcbGetJob, err = clientset.BatchV1().Jobs(*kubeConfigFlags.Namespace).Create(context.TODO(), pvcbGetJob, metav1.CreateOptions{})
 
 	if err != nil {
-		return cli.NewExitError(err, 1)
+		log.Fatalf("Failed to create job: %v", err)
 	}
 
 	timeout := 30
 
 	for timeout > 0 {
-		pvcbGetJob, err = clientset.BatchV1().Jobs(c.String("namespace")).Get(context.TODO(), pvcbGetJob.GetObjectMeta().GetName(), metav1.GetOptions{})
+		pvcbGetJob, err = clientset.BatchV1().Jobs(*kubeConfigFlags.Namespace).Get(context.TODO(), pvcbGetJob.GetObjectMeta().GetName(), metav1.GetOptions{})
 
 		if err != nil {
-			return cli.NewExitError(err, 1)
+			log.Fatalf("Failed to get job: %v", err)
 		}
 
 		if pvcbGetJob.Status.Active > 0 {
@@ -118,17 +114,17 @@ func getCommand(c *cli.Context) error {
 	}
 
 	// Find the created pod.
-	podList, err := clientset.CoreV1().Pods(c.String("namespace")).List(context.TODO(), metav1.ListOptions{
+	podList, err := clientset.CoreV1().Pods(*kubeConfigFlags.Namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "job-name=" + pvcbGetJob.Name,
 	})
 
 	if err != nil {
-		return cli.NewExitError(err, 1)
+		log.Fatalf("Failed to get pods: %v", err)
 	}
 
 	if len(podList.Items) != 1 {
 		fmt.Printf("%d\n", len(podList.Items))
-		return cli.NewExitError("Found an unexpected number of controllers, this shouldn't happen.", 1)
+		log.Fatalf("Found an unexpected number of controllers, this shouldn't happen.")
 	}
 
 	pod := &podList.Items[0]
@@ -140,9 +136,9 @@ func getCommand(c *cli.Context) error {
 
 	for pod.Status.Phase != corev1.PodRunning && timeout > 0 {
 
-		pod, err = clientset.CoreV1().Pods(c.String("namespace")).Get(context.TODO(), pod.Name, metav1.GetOptions{})
+		pod, err = clientset.CoreV1().Pods(*kubeConfigFlags.Namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{})
 		if err != nil {
-			return cli.NewExitError(err, 1)
+			log.Fatalf("Failed to get pod: %v", err)
 		}
 
 		time.Sleep(time.Second)
@@ -151,13 +147,13 @@ func getCommand(c *cli.Context) error {
 
 	podSpinner.Stop()
 	if timeout == 0 {
-		return cli.NewExitError("Pod failed to start", 1)
+		log.Fatalf("Pod failed to start")
 	}
 
 	req := clientset.CoreV1().RESTClient().
 		Post().Resource("pods").
 		Name(pod.Name).
-		Namespace(c.String("namespace")).
+		Namespace(*kubeConfigFlags.Namespace).
 		SubResource("exec").
 		Param("stdin", "true").
 		Param("stdout", "true").
@@ -169,12 +165,12 @@ func getCommand(c *cli.Context) error {
 
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
-		return cli.NewExitError(err, 1)
+		log.Fatalf("Failed to create executor: %v", err)
 	}
 
 	oldState, err := terminal.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
-		return cli.NewExitError(err, 1)
+		log.Fatalf("Failed to make raw terminal: %v", err)
 	}
 
 	defer terminal.Restore(int(os.Stdin.Fd()), oldState)
@@ -187,7 +183,7 @@ func getCommand(c *cli.Context) error {
 	})
 
 	if err != nil {
-		return cli.NewExitError(err, 1)
+		log.Fatalf("Failed to stream: %v", err)
 	}
 
 	return nil
