@@ -175,7 +175,8 @@ func getCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName string) 
 
 	defer terminal.Restore(int(os.Stdin.Fd()), oldState)
 
-	err = exec.Stream(remotecommand.StreamOptions{
+	ctx := context.Background()
+	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
