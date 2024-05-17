@@ -14,7 +14,6 @@ import (
 	"golang.org/x/term"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -206,7 +205,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		Name(pod.Name).
 		Namespace(options.namespace).
 		SubResource("exec").
-		VersionedParams(&v1.PodExecOptions{
+		VersionedParams(&corev1.PodExecOptions{
 			Command: []string{"bash", "-c", "cd /mnt && /bin/bash"},
 			Stdin:   true,
 			Stdout:  true,
