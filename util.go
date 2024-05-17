@@ -6,6 +6,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type PodOptions struct {
+	image     string
+	namespace string
+	pvc       corev1.PersistentVolumeClaim
+	cmd       []string
+}
+
 // Finds if a pod that attached to a PVC
 func findPodByPVC(podList corev1.PodList, pvc corev1.PersistentVolumeClaim) *corev1.Pod {
 	for _, pod := range podList.Items {
@@ -19,15 +26,15 @@ func findPodByPVC(podList corev1.PodList, pvc corev1.PersistentVolumeClaim) *cor
 }
 
 // Returns a job for the get command.
-func buildPvcbGetJob(namespace string, image string, pvc corev1.PersistentVolumeClaim) *batchv1.Job {
-
+// func buildPvcbGetJob(namespace string, image string, pvc corev1.PersistentVolumeClaim) *batchv1.Job {
+func buildPvcbGetJob(options PodOptions) *batchv1.Job {
 	TTLSecondsAfterFinished := new(int32)
 	*TTLSecondsAfterFinished = 10
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pvcb-edit-" + pvc.Name,
-			Namespace: namespace,
+			Name:      "pvcb-edit-" + options.pvc.Name,
+			Namespace: options.namespace,
 		},
 		Spec: batchv1.JobSpec{
 			TTLSecondsAfterFinished: TTLSecondsAfterFinished,
@@ -39,9 +46,10 @@ func buildPvcbGetJob(namespace string, image string, pvc corev1.PersistentVolume
 					RestartPolicy: "Never",
 					Containers: []corev1.Container{
 						{
-							Name:    "pvcb-edit",
-							Image:   image,
-							Command: []string{"/bin/bash", "-c", "--"},
+							Name:  "pvcb-edit",
+							Image: image,
+							//Command: []string{"/bin/bash", "-c", "--"},
+							Command: options.cmd,
 							Args:    []string{"/entrypoint.sh"},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -56,7 +64,7 @@ func buildPvcbGetJob(namespace string, image string, pvc corev1.PersistentVolume
 							Name: "target-pvc",
 							VolumeSource: corev1.VolumeSource{
 								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: pvc.Name,
+									ClaimName: options.pvc.Name,
 								},
 							},
 						},

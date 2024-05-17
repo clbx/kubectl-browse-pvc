@@ -5,19 +5,24 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/briandowns/spinner"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/remotecommand"
+
+	"k8s.io/client-go/kubernetes"
 )
 
 var image string
@@ -33,7 +38,7 @@ func main() {
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			pvcName := args[0]
-			getCommand(kubeConfigFlags, pvcName)
+			browseCommand(kubeConfigFlags, pvcName)
 		},
 	}
 
@@ -46,7 +51,45 @@ func main() {
 
 }
 
-func getCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName string) error {
+type sizeQueue struct {
+	resizeChan   chan remotecommand.TerminalSize
+	stopResizing chan struct{}
+}
+
+func (s *sizeQueue) Next() *remotecommand.TerminalSize {
+	size, ok := <-s.resizeChan
+	if !ok {
+		return nil
+	}
+	return &size
+}
+
+func (s *sizeQueue) MonitorSize() {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGWINCH)
+
+	for {
+		select {
+		case <-sigCh:
+			width, height, err := term.GetSize(int(os.Stdout.Fd()))
+			if err == nil {
+				select {
+				case s.resizeChan <- remotecommand.TerminalSize{Width: uint16(width), Height: uint16(height)}:
+				default:
+				}
+			}
+		case <-s.stopResizing:
+			close(s.resizeChan)
+			return
+		}
+	}
+}
+
+func (s *sizeQueue) Stop() {
+	close(s.stopResizing)
+}
+
+func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName string) error {
 
 	config, err := kubeConfigFlags.ToRESTConfig()
 	if err != nil {
@@ -86,8 +129,15 @@ func getCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName string) 
 		}
 	}
 
+	options := &PodOptions{
+		image:     image,
+		namespace: *kubeConfigFlags.Namespace,
+		pvc:       *targetPvc,
+		cmd:       []string{"/bin/bash", "-c", "--"},
+	}
+
 	// Build the Job
-	pvcbGetJob := buildPvcbGetJob(*kubeConfigFlags.Namespace, image, *targetPvc)
+	pvcbGetJob := buildPvcbGetJob(*options)
 	// Create Job
 	pvcbGetJob, err = clientset.BatchV1().Jobs(*kubeConfigFlags.Namespace).Create(context.TODO(), pvcbGetJob, metav1.CreateOptions{})
 
@@ -150,43 +200,55 @@ func getCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName string) 
 		log.Fatalf("Pod failed to start")
 	}
 
-	req := clientset.CoreV1().RESTClient().
-		Post().Resource("pods").
+	request := clientset.CoreV1().RESTClient().
+		Post().
+		Resource("pods").
 		Name(pod.Name).
-		Namespace(*kubeConfigFlags.Namespace).
+		Namespace(options.namespace).
 		SubResource("exec").
-		Param("stdin", "true").
-		Param("stdout", "true").
-		Param("stderr", "true").
-		Param("tty", "true").
-		Param("command", "bash").
-		Param("command", "-c").
-		Param("command", "cd /mnt && /bin/bash")
+		VersionedParams(&v1.PodExecOptions{
+			Command: []string{"bash", "-c", "cd /mnt && /bin/bash"},
+			Stdin:   true,
+			Stdout:  true,
+			Stderr:  true,
+			TTY:     true,
+		}, scheme.ParameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
+	exec, err := remotecommand.NewSPDYExecutor(config, "POST", request.URL())
 	if err != nil {
-		log.Fatalf("Failed to create executor: %v", err)
+		return err
 	}
 
-	oldState, err := terminal.MakeRaw(int(os.Stdin.Fd()))
+	oldState, err := term.MakeRaw(0)
 	if err != nil {
-		log.Fatalf("Failed to make raw terminal: %v", err)
+		panic(err)
+	}
+	defer term.Restore(0, oldState)
+
+	terminalSizeQueue := &sizeQueue{
+		resizeChan:   make(chan remotecommand.TerminalSize, 1),
+		stopResizing: make(chan struct{}),
 	}
 
-	defer terminal.Restore(int(os.Stdin.Fd()), oldState)
+	// prime with initial term size
+	width, height, err := term.GetSize(int(os.Stdout.Fd()))
+	if err == nil {
+		terminalSizeQueue.resizeChan <- remotecommand.TerminalSize{Width: uint16(width), Height: uint16(height)}
+	}
 
-	ctx := context.Background()
-	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-		Tty:    true,
+	go terminalSizeQueue.MonitorSize()
+	defer terminalSizeQueue.Stop()
+
+	err = exec.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
+		Stdin:             os.Stdin,
+		Stdout:            os.Stdout,
+		Stderr:            os.Stderr,
+		Tty:               true,
+		TerminalSizeQueue: terminalSizeQueue,
 	})
-
 	if err != nil {
-		log.Fatalf("Failed to stream: %v", err)
+		return err
 	}
 
 	return nil
-
 }
