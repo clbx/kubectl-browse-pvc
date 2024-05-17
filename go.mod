@@ -2,7 +2,6 @@ module github.com/clbx/kubectl-browse-pvc
 
 go 1.22.0
 
-toolchain go1.22.1
 
 require (
 	github.com/briandowns/spinner v1.23.0
