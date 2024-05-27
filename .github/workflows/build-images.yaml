@@ -3,7 +3,8 @@ name: Build Image
 on:
   push:
     paths:
-    - Dockerfiles/**
+    - Dockerfile
+    - entrypoint.sh
 
 jobs:
   build:
@@ -21,7 +22,7 @@ jobs:
     - name: Build and push
       uses: docker/build-push-action@v5
       with:
-        context: Dockerfiles
+        context: .
         file: ./Dockerfile
         push: true
         tags: |
