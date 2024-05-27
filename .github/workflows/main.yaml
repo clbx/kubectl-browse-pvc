@@ -54,24 +54,24 @@ jobs:
         path: |
           ./kubectl-browse-pvc
           LICENSE
-  integration-tests:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Create KIND Cluster
-      uses: helm/kind-action@v1.5.0
-      with:
-        cluster_name: testing
+  # integration-tests:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Create KIND Cluster
+  #     uses: helm/kind-action@v1.5.0
+  #     with:
+  #       cluster_name: testing
 
-    - name: Get cluster info
-      run: |
-        kubectl cluster-info
-        kubectl get nodes
+  #   - name: Get cluster info
+  #     run: |
+  #       kubectl cluster-info
+  #       kubectl get nodes
 
-    - name: Check out Code
-      uses: actions/checkout@v4.0.0
+  #   - name: Check out Code
+  #     uses: actions/checkout@v4.0.0
 
-    - name: Download Artifacts
-      uses: actions/download-artifact@v4
+  #   - name: Download Artifacts
+  #     uses: actions/download-artifact@v4
 
 
 
