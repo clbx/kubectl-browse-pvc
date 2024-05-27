@@ -25,23 +25,25 @@ import (
 )
 
 var image string
+var Version string
 
 func main() {
 
 	var kubeConfigFlags = genericclioptions.NewConfigFlags(true)
 
 	var rootCmd = &cobra.Command{
-		Use:   "kubectl-browse-pvc",
-		Short: "Kubernetes PVC Browser",
-		Long:  `Kubernetes PVC Browser`,
-		Args:  cobra.MinimumNArgs(1),
+		Use:     "kubectl-browse-pvc",
+		Short:   "Kubernetes PVC Browser",
+		Long:    `Kubernetes PVC Browser`,
+		Version: Version,
+		Args:    cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			pvcName := args[0]
 			browseCommand(kubeConfigFlags, pvcName)
 		},
 	}
 
-	rootCmd.Flags().StringVarP(&image, "image", "i", "clbx/pvcb-edit", "Image to mount job to")
+	rootCmd.Flags().StringVarP(&image, "image", "i", "clbx/kubectl-browse-pvc", "Image to mount job to")
 	kubeConfigFlags.AddFlags(rootCmd.Flags())
 
 	if err := rootCmd.Execute(); err != nil {
