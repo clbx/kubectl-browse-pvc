@@ -31,6 +31,10 @@ func main() {
 
 	var kubeConfigFlags = genericclioptions.NewConfigFlags(true)
 
+	if Version == "" {
+		Version = "devel"
+	}
+
 	var rootCmd = &cobra.Command{
 		Use:     "kubectl-browse-pvc",
 		Short:   "Kubernetes PVC Browser",
