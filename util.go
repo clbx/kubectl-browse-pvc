@@ -13,6 +13,24 @@ type PodOptions struct {
 	cmd       []string
 }
 
+var script = `
+base_processes=$(ps aux | grep -E "ash|bash|sh" | grep -v grep | wc -l)
+echo "Processes: $base_processes"
+sleep 2
+
+while :; do
+    shell_processes=$(ps aux | grep -E "ash|bash|sh" | grep -v grep | wc -l)
+    if [ "$shell_processes" -gt "$base_processes" ]; then
+        echo "Found an additional process"
+        while [ "$shell_processes" -gt "$base_processes" ]; do
+            sleep 2
+            shell_processes=$(ps aux | grep -E "ash|bash|sh" | grep -v grep | wc -l)
+        done
+        exit 0
+    fi 
+done
+`
+
 // Finds if a pod that attached to a PVC
 func findPodByPVC(podList corev1.PodList, pvc corev1.PersistentVolumeClaim) *corev1.Pod {
 	for _, pod := range podList.Items {
@@ -33,24 +51,25 @@ func buildPvcbGetJob(options PodOptions) *batchv1.Job {
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pvcb-edit-" + options.pvc.Name,
+			Name:      "browse-pvc" + options.pvc.Name,
 			Namespace: options.namespace,
 		},
 		Spec: batchv1.JobSpec{
 			TTLSecondsAfterFinished: TTLSecondsAfterFinished,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "pvcb-edit",
+					Name: "browse-pvc",
 				},
 				Spec: corev1.PodSpec{
 					RestartPolicy: "Never",
 					Containers: []corev1.Container{
 						{
-							Name:  "pvcb-edit",
+							Name:  "browser",
 							Image: image,
 							//Command: []string{"/bin/bash", "-c", "--"},
 							Command: options.cmd,
-							Args:    []string{"/entrypoint.sh"},
+							//Args:    []string{"/entrypoint.sh"},
+							Args: []string{script},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "target-pvc",

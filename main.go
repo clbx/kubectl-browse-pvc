@@ -43,7 +43,7 @@ func main() {
 		},
 	}
 
-	rootCmd.Flags().StringVarP(&image, "image", "i", "clbx/kubectl-browse-pvc", "Image to mount job to")
+	rootCmd.Flags().StringVarP(&image, "image", "i", "alpine", "Image to mount job to")
 	kubeConfigFlags.AddFlags(rootCmd.Flags())
 
 	if err := rootCmd.Execute(); err != nil {
@@ -134,7 +134,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		image:     image,
 		namespace: *kubeConfigFlags.Namespace,
 		pvc:       *targetPvc,
-		cmd:       []string{"/bin/bash", "-c", "--"},
+		cmd:       []string{"/bin/sh", "-c", "--"},
 	}
 
 	// Build the Job
@@ -208,7 +208,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		Namespace(options.namespace).
 		SubResource("exec").
 		VersionedParams(&corev1.PodExecOptions{
-			Command: []string{"bash", "-c", "cd /mnt && /bin/bash"},
+			Command: []string{"sh", "-c", "cd /mnt && (ash || bash || sh)"},
 			Stdin:   true,
 			Stdout:  true,
 			Stderr:  true,
