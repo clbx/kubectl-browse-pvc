@@ -18,7 +18,7 @@ jobs:
       uses: actions/checkout@v4.0.0
 
     - name: Build
-      run: go build -v -o kubectl-browse-pvc .
+      run: go build -v -ldflags "-X main.Version=${{ github.ref_name }}" -o kubectl-browse-pvc .
 
     - name: Fix permissions
       run: chmod +x ./kubectl-browse-pvc
@@ -42,7 +42,7 @@ jobs:
       uses: actions/checkout@v4.0.0
 
     - name: Build
-      run: go build -v -o kubectl-browse-pvc .
+      run: go build -v -ldflags "-X main.Version=${{ github.ref_name }}" -o kubectl-browse-pvc .
 
     - name: Fix permissions
       run: chmod +x ./kubectl-browse-pvc
