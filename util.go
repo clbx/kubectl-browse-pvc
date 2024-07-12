@@ -13,18 +13,37 @@ type PodOptions struct {
 	cmd       []string
 }
 
+// var script = `
+// base_processes=$(ps aux | grep -E "ash|bash|sh" | grep -v grep | wc -l)
+// echo "Processes: $base_processes"
+// sleep 2
+
+// while :; do
+//
+//	shell_processes=$(ps aux | grep -E "ash|bash|sh" | grep -v grep | wc -l)
+//	if [ "$shell_processes" -gt "$base_processes" ]; then
+//	    echo "Found an additional process"
+//	    while [ "$shell_processes" -gt "$base_processes" ]; do
+//	        sleep 2
+//	        shell_processes=$(ps aux | grep -E "ash|bash|sh" | grep -v grep | wc -l)
+//	    done
+//	    exit 0
+//	fi
+//
+// done
+// `
 var script = `
-base_processes=$(ps aux | grep -E "ash|bash|sh" | grep -v grep | wc -l)
+base_processes=$(ls /proc | grep -E '^[0-9]+$' | xargs -I {} sh -c 'cat /proc/{}/comm 2>/dev/null' | grep -E "ash|bash|sh" | wc -l)
 echo "Processes: $base_processes"
 sleep 2
 
 while :; do
-    shell_processes=$(ps aux | grep -E "ash|bash|sh" | grep -v grep | wc -l)
+    shell_processes=$(ls /proc | grep -E '^[0-9]+$' | xargs -I {} sh -c 'cat /proc/{}/comm 2>/dev/null' | grep -E "ash|bash|sh" | wc -l)
     if [ "$shell_processes" -gt "$base_processes" ]; then
         echo "Found an additional process"
         while [ "$shell_processes" -gt "$base_processes" ]; do
             sleep 2
-            shell_processes=$(ps aux | grep -E "ash|bash|sh" | grep -v grep | wc -l)
+            shell_processes=$(ls /proc | grep -E '^[0-9]+$' | xargs -I {} sh -c 'cat /proc/{}/comm 2>/dev/null' | grep -E "ash|bash|sh" | wc -l)
         done
         exit 0
     fi 
