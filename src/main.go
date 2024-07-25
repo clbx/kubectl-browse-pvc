@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -54,44 +52,6 @@ func main() {
 		log.Fatalf("Error executing command: %s\n", err)
 	}
 
-}
-
-type sizeQueue struct {
-	resizeChan   chan remotecommand.TerminalSize
-	stopResizing chan struct{}
-}
-
-func (s *sizeQueue) Next() *remotecommand.TerminalSize {
-	size, ok := <-s.resizeChan
-	if !ok {
-		return nil
-	}
-	return &size
-}
-
-func (s *sizeQueue) MonitorSize() {
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGWINCH)
-
-	for {
-		select {
-		case <-sigCh:
-			width, height, err := term.GetSize(int(os.Stdout.Fd()))
-			if err == nil {
-				select {
-				case s.resizeChan <- remotecommand.TerminalSize{Width: uint16(width), Height: uint16(height)}:
-				default:
-				}
-			}
-		case <-s.stopResizing:
-			close(s.resizeChan)
-			return
-		}
-	}
-}
-
-func (s *sizeQueue) Stop() {
-	close(s.stopResizing)
 }
 
 func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName string) error {
