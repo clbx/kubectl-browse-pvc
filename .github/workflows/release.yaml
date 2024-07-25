@@ -6,13 +6,13 @@ on:
     tags:
     - "v*.*.*"
 jobs:
-  call-common-jobs:
+  build:
     uses: ./.github/workflows/build.yaml
     with:
       version: ${{ github.ref_name }}
   create-release:
     runs-on: ubuntu-latest
-    needs: [build-darwin, build-linux]
+    needs: build
     steps:
     - name: Download Artifacts
       uses: actions/download-artifact@v4
