@@ -19,11 +19,10 @@ jobs:
     - name: Check out Code
       uses: actions/checkout@v4.0.0
 
-    - name: cd into src
-      run: cd src
-
     - name: Build
-      run: go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc .
+      run: |
+        cd src
+        go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc .
 
     - name: Fix permissions
       run: chmod +x ./kubectl-browse-pvc
@@ -47,11 +46,10 @@ jobs:
     - name: Check out Code
       uses: actions/checkout@v4.0.0
 
-    - name: cd into src
-      run: cd src
-
     - name: Build
-      run: go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc .
+      run: |
+        cd src
+        go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc .
 
     - name: Fix permissions
       run: chmod +x ./kubectl-browse-pvc
@@ -75,11 +73,10 @@ jobs:
     - name: Check out Code
       uses: actions/checkout@v4.0.0
 
-    - name: cd into src
-      run: cd src
-
     - name: Build
-      run: go build -v -ldflags "-X main.Version=${GITHUB_SHA::7}" -o kubectl-browse-pvc .
+      run: |
+        cd src
+        go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc .
 
     - name: Fix permissions
       run: chmod +x ./kubectl-browse-pvc
