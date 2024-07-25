@@ -14,21 +14,22 @@ type PodOptions struct {
 }
 
 var script = `
-base_processes=$(ls /proc | grep -E '^[0-9]+$' | xargs -I {} sh -c 'cat /proc/{}/comm 2>/dev/null' | grep -E "ash|bash|sh" | wc -l)
+base_processes=$(ls /proc | grep -E '^[0-9]+$' | while read -r pid; do cat /proc/"$pid"/comm 2>/dev/null; done | grep -E "ash|bash|sh" | wc -l)
 echo "Processes: $base_processes"
 sleep 2
 
 while :; do
-    shell_processes=$(ls /proc | grep -E '^[0-9]+$' | xargs -I {} sh -c 'cat /proc/{}/comm 2>/dev/null' | grep -E "ash|bash|sh" | wc -l)
+    shell_processes=$(ls /proc | grep -E '^[0-9]+$' | while read -r pid; do cat /proc/"$pid"/comm 2>/dev/null; done | grep -E "ash|bash|sh" | wc -l)
     if [ "$shell_processes" -gt "$base_processes" ]; then
         echo "Found an additional process"
         while [ "$shell_processes" -gt "$base_processes" ]; do
             sleep 2
-            shell_processes=$(ls /proc | grep -E '^[0-9]+$' | xargs -I {} sh -c 'cat /proc/{}/comm 2>/dev/null' | grep -E "ash|bash|sh" | wc -l)
+            shell_processes=$(ls /proc | grep -E '^[0-9]+$' | while read -r pid; do cat /proc/"$pid"/comm 2>/dev/null; done | grep -E "ash|bash|sh" | wc -l)
         done
         exit 0
     fi 
 done
+
 `
 
 // Finds if a pod that attached to a PVC
@@ -51,7 +52,7 @@ func buildPvcbGetJob(options PodOptions) *batchv1.Job {
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "browse-pvc" + options.pvc.Name,
+			Name:      "browse-" + options.pvc.Name,
 			Namespace: options.namespace,
 		},
 		Spec: batchv1.JobSpec{

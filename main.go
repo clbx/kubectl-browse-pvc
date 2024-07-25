@@ -186,7 +186,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 
 	podSpinner := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
 	podSpinner.Suffix = " Waiting for Pod to Start\n"
-	podSpinner.FinalMSG = "✓ Pod Started\n"
+	podSpinner.FinalMSG = "✓ Attached to " + pod.Name + "\n"
 	podSpinner.Start()
 
 	for pod.Status.Phase != corev1.PodRunning && timeout > 0 {
