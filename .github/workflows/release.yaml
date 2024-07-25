@@ -30,6 +30,7 @@ jobs:
         path: |
           ./kubectl-browse-pvc
           LICENSE
+
   build-linux:
     runs-on: ubuntu-latest
     steps:
