@@ -1,9 +1,11 @@
-name: Build & Test
+name: Build & Release
 
 on:
   push:
     branches:
     - main
+    tags:
+    - "v*.*.*"
 
 jobs:
   build-darwin:
@@ -18,7 +20,7 @@ jobs:
       uses: actions/checkout@v4.0.0
 
     - name: Build
-      run: go build -v -ldflags "-X main.Version=${GITHUB_SHA::7}" -o kubectl-browse-pvc .
+      run: go build -v -ldflags "-X main.Version=${{ github.sha }}" -o kubectl-browse-pvc .
 
     - name: Fix permissions
       run: chmod +x ./kubectl-browse-pvc
@@ -30,6 +32,7 @@ jobs:
         path: |
           ./kubectl-browse-pvc
           LICENSE
+
   build-linux:
     runs-on: ubuntu-latest
     steps:
@@ -42,7 +45,7 @@ jobs:
       uses: actions/checkout@v4.0.0
 
     - name: Build
-      run: go build -v -ldflags "-X main.Version=${GITHUB_SHA::7}" -o kubectl-browse-pvc .
+      run: go build -v -ldflags "-X main.Version=${{ github.sha }}" -o kubectl-browse-pvc .
 
     - name: Fix permissions
       run: chmod +x ./kubectl-browse-pvc
@@ -55,4 +58,36 @@ jobs:
           ./kubectl-browse-pvc
           LICENSE
 
+  create-release:
+    runs-on: ubuntu-latest
+    needs: [build-darwin, build-linux]
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
 
+    - name: Fix permissions linux
+      run: chmod +x kubectl-browse-pvc-linux/kubectl-browse-pvc
+
+    - name: Fix permissions darwin
+      run: chmod +x kubectl-browse-pvc-darwin/kubectl-browse-pvc
+
+    - name: Zip linux
+      uses: montudor/action-zip@v1
+      with:
+        args: zip -j kubectl-browse-pvc-linux.zip kubectl-browse-pvc-linux/kubectl-browse-pvc kubectl-browse-pvc-linux/LICENSE
+
+    - name: Zip darwin
+      uses: montudor/action-zip@v1
+      with:
+        args: zip -j kubectl-browse-pvc-darwin.zip kubectl-browse-pvc-darwin/kubectl-browse-pvc kubectl-browse-pvc-darwin/LICENSE
+
+    - name: Create Release
+      id: create_release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "kubectl-browse-pvc-darwin.zip,kubectl-browse-pvc-linux.zip"
+        artifactErrorsFailBuild: true
+
+    #- name: Update Krew
+    #  uses: rajatjindal/krew-release-bot@v0.0.46
