@@ -50,6 +50,7 @@ jobs:
       with:
         artifacts: "kubectl-browse-pvc-darwin_arm.zip,kubectl-browse-pvc-darwin_amd64.zip,kubectl-browse-pvc-linux_amd64.zip"
         artifactErrorsFailBuild: true
+        skipIfReleaseExists: true
 
     - name: Check out Code
       uses: actions/checkout@v4.0.0
