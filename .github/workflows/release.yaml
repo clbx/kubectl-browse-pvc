@@ -20,13 +20,13 @@ jobs:
     - name: ls
       run: ls -R
 
-    - name: Fix permissions linux
+    - name: Fix permissions linux AMD64
       run: chmod +x kubectl-browse-pvc-linux-x86_64/kubectl-browse-pvc
 
-    - name: Fix permissions darwin arm
+    - name: Fix permissions darwin ARM
       run: chmod +x kubectl-browse-pvc-darwin-arm/kubectl-browse-pvc
 
-    - name: Fix permissions darwin arm
+    - name: Fix permissions darwin AMD64
       run: chmod +x kubectl-browse-pvc-darwin-x86_64/kubectl-browse-pvc
 
     - name: Zip linux AMD64
