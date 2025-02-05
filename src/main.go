@@ -143,7 +143,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 	}
 
 	// Find the created pod.
-	podList, err := clientset.CoreV1().Pods(*kubeConfigFlags.Namespace).List(context.TODO(), metav1.ListOptions{
+	podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "job-name=" + pvcbGetJob.Name,
 	})
 
@@ -165,7 +165,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 
 	for pod.Status.Phase != corev1.PodRunning && timeout > 0 {
 
-		pod, err = clientset.CoreV1().Pods(*kubeConfigFlags.Namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{})
+		pod, err = clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{})
 		if err != nil {
 			log.Fatalf("Failed to get pod: %v", err)
 		}
