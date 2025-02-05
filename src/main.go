@@ -17,6 +17,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
 
 	"k8s.io/client-go/kubernetes"
@@ -66,12 +67,25 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		log.Fatalf("Failed to create kubernetes client: %v", err)
 	}
 
-	targetPvc, err := clientset.CoreV1().PersistentVolumeClaims(*kubeConfigFlags.Namespace).Get(context.TODO(), pvcName, metav1.GetOptions{})
+	// Get namespace if not set
+	namespace := *kubeConfigFlags.Namespace
+	if namespace == "" {
+		config, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+		if err != nil {
+			log.Fatalf("Failed to load kubeconfig: %v", err)
+		}
+		namespace = config.Contexts[config.CurrentContext].Namespace
+		if err != nil {
+			log.Fatalf("Failed to get namespace from current context: %v", err)
+		}
+	}
+
+	targetPvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.TODO(), pvcName, metav1.GetOptions{})
 	if err != nil {
 		log.Fatalf("Failed to get PVC: %v", err)
 	}
 
-	nsPods, err := clientset.CoreV1().Pods(*kubeConfigFlags.Namespace).List(context.TODO(), metav1.ListOptions{})
+	nsPods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		log.Fatalf("Failed to get pods: %v", err)
 	}
@@ -96,7 +110,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 
 	options := &PodOptions{
 		image:     image,
-		namespace: *kubeConfigFlags.Namespace,
+		namespace: namespace,
 		pvc:       *targetPvc,
 		cmd:       []string{"/bin/sh", "-c", "--"},
 	}
@@ -104,7 +118,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 	// Build the Job
 	pvcbGetJob := buildPvcbGetJob(*options)
 	// Create Job
-	pvcbGetJob, err = clientset.BatchV1().Jobs(*kubeConfigFlags.Namespace).Create(context.TODO(), pvcbGetJob, metav1.CreateOptions{})
+	pvcbGetJob, err = clientset.BatchV1().Jobs(namespace).Create(context.TODO(), pvcbGetJob, metav1.CreateOptions{})
 
 	if err != nil {
 		log.Fatalf("Failed to create job: %v", err)
@@ -113,7 +127,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 	timeout := 30
 
 	for timeout > 0 {
-		pvcbGetJob, err = clientset.BatchV1().Jobs(*kubeConfigFlags.Namespace).Get(context.TODO(), pvcbGetJob.GetObjectMeta().GetName(), metav1.GetOptions{})
+		pvcbGetJob, err = clientset.BatchV1().Jobs(namespace).Get(context.TODO(), pvcbGetJob.GetObjectMeta().GetName(), metav1.GetOptions{})
 
 		if err != nil {
 			log.Fatalf("Failed to get job: %v", err)
