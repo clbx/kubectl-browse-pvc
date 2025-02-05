@@ -14,6 +14,8 @@ type PodOptions struct {
 }
 
 var script = `
+chmod +x /etc/profile.d/ps1.sh
+
 base_processes=$(ls /proc | grep -E '^[0-9]+$' | while read -r pid; do cat /proc/"$pid"/comm 2>/dev/null; done | grep -E "ash|bash|sh" | wc -l)
 echo "Processes: $base_processes"
 sleep 2
@@ -29,7 +31,6 @@ while :; do
         exit 0
     fi 
 done
-
 `
 
 // Finds if a pod that attached to a PVC
@@ -65,12 +66,16 @@ func buildPvcbGetJob(options PodOptions) *batchv1.Job {
 					RestartPolicy: "Never",
 					Containers: []corev1.Container{
 						{
-							Name:  "browser",
-							Image: image,
-							//Command: []string{"/bin/bash", "-c", "--"},
+							Name:    "browser",
+							Image:   image,
 							Command: options.cmd,
-							//Args:    []string{"/entrypoint.sh"},
-							Args: []string{script},
+							Args:    []string{script},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "PS1",
+									Value: "\\h:\\w\\$ ",
+								},
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "target-pvc",

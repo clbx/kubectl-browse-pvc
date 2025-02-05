@@ -3,6 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: unbound-pvc
 spec:
+  storageClassName: mayastor
   accessModes:
   - ReadWriteOnce
   resources:

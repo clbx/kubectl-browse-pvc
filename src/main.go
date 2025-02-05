@@ -80,6 +80,8 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		}
 	}
 
+	fmt.Printf("Browsing PVC %s in namespace %s\n", pvcName, namespace)
+
 	targetPvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.TODO(), pvcName, metav1.GetOptions{})
 	if err != nil {
 		log.Fatalf("Failed to get PVC: %v", err)
