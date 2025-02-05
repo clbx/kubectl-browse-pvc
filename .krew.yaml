@@ -9,16 +9,31 @@ spec:
   shortDescription: "Browse PVC contents from the command line."
   description: "Browse PVCs from the command line. Creates a job thats binds an unbound PVC and execs into it."
   platforms:
-  # macOS
+  # macOS ARM
   - selector:
       matchLabels:
         os: darwin
-    {{addURIAndSha "https://github.com/clbx/kubectl-browse-pvc/releases/download/{{ .TagName }}/kubectl-browse-pvc-darwin.zip" .TagName }}
+        arch: arm64
+    {{addURIAndSha "https://github.com/clbx/kubectl-browse-pvc/releases/download/{{ .TagName }}/kubectl-browse-pvc-darwin-arm.zip" .TagName }}
     bin: kubectl-browse-pvc
-  # linux
+  # macOS x86_64
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: amd64
+    {{addURIAndSha "https://github.com/clbx/kubectl-browse-pvc/releases/download/{{ .TagName }}/kubectl-browse-pvc-darwin-x86_64.zip" .TagName }}
+    bin: kubectl-browse-pvc
+  # linux x86_64
   - selector:
       matchLabels:
         os: linux
         arch: amd64
-    {{addURIAndSha "https://github.com/clbx/kubectl-browse-pvc/releases/download/{{ .TagName }}/kubectl-browse-pvc-linux.zip" .TagName }}
+    {{addURIAndSha "https://github.com/clbx/kubectl-browse-pvc/releases/download/{{ .TagName }}/kubectl-browse-pvc-linux-x86_64.zip" .TagName }}
+    bin: kubectl-browse-pvc
+  # linux ARM
+  - selector:
+      matchLabels:
+        os: linux
+        arch: arm64
+    {{addURIAndSha "https://github.com/clbx/kubectl-browse-pvc/releases/download/{{ .TagName }}/kubectl-browse-pvc-linux-arm.zip" .TagName }}
     bin: kubectl-browse-pvc

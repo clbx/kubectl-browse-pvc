@@ -92,27 +92,30 @@ jobs:
           ./kubectl-browse-pvc
           LICENSE
 
-  # build-windows-x86_64:
-  #   runs-on: windows-latest
-  #   steps:
-  #   - name: Set up Go
-  #     uses: actions/setup-go@v4.1.0
-  #     with:
-  #       go-version: "1.22.0"
+  build-linux-arm:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v4.1.0
+      with:
+        go-version: "1.22.0"
 
-  #   - name: Check out Code
-  #     uses: actions/checkout@v4.0.0
+    - name: Check out Code
+      uses: actions/checkout@v4.0.0
 
-  #   - name: Build
-  #     run: go build -v -ldflags "-X main.Version=${GITHUB_SHA::7}" -o kubectl-browse-pvc .
+    - name: Build
+      run: |
+        cd src
+        GOARCH=arm64 go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc .
+        mv kubectl-browse-pvc ..
 
-  #   - name: Fix permissions
-  #     run: chmod +x ./kubectl-browse-pvc
+    - name: Fix permissions
+      run: chmod +x ./kubectl-browse-pvc
 
-  #   - name: Upload Artifact
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: kubectl-browse-pvc-linux-x86_64
-  #       path: |
-  #         ./kubectl-browse-pvc
-  #         LICENSE
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: kubectl-browse-pvc-linux-arm
+        path: |
+          ./kubectl-browse-pvc
+          LICENSE
