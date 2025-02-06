@@ -11,6 +11,7 @@ type PodOptions struct {
 	namespace string
 	pvc       corev1.PersistentVolumeClaim
 	cmd       []string
+	args      []string
 }
 
 var script = `
@@ -48,6 +49,12 @@ func findPodByPVC(podList corev1.PodList, pvc corev1.PersistentVolumeClaim) *cor
 // Returns a job for the get command.
 // func buildPvcbGetJob(namespace string, image string, pvc corev1.PersistentVolumeClaim) *batchv1.Job {
 func buildPvcbGetJob(options PodOptions) *batchv1.Job {
+
+	//Check if provided arguments is empty. If so use the browsing script
+	if len(options.args) == 0 {
+		options.args = []string{script}
+	}
+
 	TTLSecondsAfterFinished := new(int32)
 	*TTLSecondsAfterFinished = 10
 
@@ -61,6 +68,9 @@ func buildPvcbGetJob(options PodOptions) *batchv1.Job {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "browse-pvc",
+					Labels: map[string]string{
+						"job-name": "browse-" + options.pvc.Name,
+					},
 				},
 				Spec: corev1.PodSpec{
 					RestartPolicy: "Never",
@@ -69,7 +79,7 @@ func buildPvcbGetJob(options PodOptions) *batchv1.Job {
 							Name:    "browser",
 							Image:   image,
 							Command: options.cmd,
-							Args:    []string{script},
+							Args:    options.args,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "PS1",

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -35,14 +37,15 @@ func main() {
 	}
 
 	var rootCmd = &cobra.Command{
-		Use:     "kubectl-browse-pvc",
+		Use:     "kubectl-browse-pvc <PVC-NAME> [-- COMMAND [ARGS...]]",
 		Short:   "Kubernetes PVC Browser",
 		Long:    `Kubernetes PVC Browser`,
 		Version: Version,
 		Args:    cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			pvcName := args[0]
-			browseCommand(kubeConfigFlags, pvcName)
+			commandArgs := args[1:]
+			browseCommand(kubeConfigFlags, pvcName, commandArgs)
 		},
 	}
 
@@ -55,7 +58,7 @@ func main() {
 
 }
 
-func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName string) error {
+func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName string, commandArgs []string) error {
 
 	config, err := kubeConfigFlags.ToRESTConfig()
 	if err != nil {
@@ -115,12 +118,24 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		namespace: namespace,
 		pvc:       *targetPvc,
 		cmd:       []string{"/bin/sh", "-c", "--"},
+		args:      commandArgs,
 	}
 
 	// Build the Job
 	pvcbGetJob := buildPvcbGetJob(*options)
 	// Create Job
 	pvcbGetJob, err = clientset.BatchV1().Jobs(namespace).Create(context.TODO(), pvcbGetJob, metav1.CreateOptions{})
+
+	//Handle if there were command args
+	if len(commandArgs) > 0 {
+		waitForJobCompletion(*clientset, namespace, pvcbGetJob.Name)
+		logs, err := getPodLogs(clientset, namespace, targetPvc.Name)
+		if err != nil {
+			log.Fatalf("Failed to get logs: %v", err)
+		}
+		fmt.Printf("%s", logs)
+		return nil
+	}
 
 	if err != nil {
 		log.Fatalf("Failed to create job: %v", err)
@@ -232,4 +247,56 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 	}
 
 	return nil
+}
+
+func waitForJobCompletion(clientset kubernetes.Clientset, namespace string, jobName string) error {
+	timeout := 300
+	for timeout > 0 {
+		job, err := clientset.BatchV1().Jobs(namespace).Get(context.TODO(), jobName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if job.Status.Succeeded > 0 || job.Status.Failed > 0 {
+			return nil
+		}
+		time.Sleep(time.Second)
+		timeout--
+	}
+	return fmt.Errorf("job failed to complete within 300s")
+}
+
+func getPodLogs(clientset *kubernetes.Clientset, namespace string, pvcName string) (string, error) {
+
+	//find the pod based on the label applied to the pod in the job
+	labelSelector := fmt.Sprintf("job-name=browse-%s", pvcName)
+	podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("failed to get pods: %v", err)
+	}
+
+	if len(podList.Items) != 1 {
+		return "", fmt.Errorf("found an unexpected number of pods with the browse label, this shouldn't happen")
+	}
+
+	podName := podList.Items[0].Name
+
+	podLogOpts := corev1.PodLogOptions{}
+	req := clientset.CoreV1().Pods(namespace).GetLogs(podName, &podLogOpts)
+	podLogs, err := req.Stream(context.TODO())
+
+	if err != nil {
+		return "", fmt.Errorf("failed to get logs: %v", err)
+	}
+
+	defer podLogs.Close()
+
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return "", fmt.Errorf("failed to copy logs: %v", err)
+	}
+	return buf.String(), nil
 }
