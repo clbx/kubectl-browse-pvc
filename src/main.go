@@ -105,12 +105,11 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		}
 	}
 
-	if attachedPod == nil {
-	} else {
-		if manyAccessMode {
-		} else {
-			log.Fatalf("PVC attached to pod %s", attachedPod.Name)
-		}
+	var node string = ""
+
+	// If the pvc is a rwo and already attached to a node, it needs to scheduled to the same node as the workload
+	if attachedPod != nil && !manyAccessMode {
+		node = attachedPod.Spec.NodeName
 	}
 
 	options := &PodOptions{
@@ -119,6 +118,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		pvc:       *targetPvc,
 		cmd:       []string{"/bin/sh", "-c", "--"},
 		args:      commandArgs,
+		node:      node,
 	}
 
 	// Build the Job

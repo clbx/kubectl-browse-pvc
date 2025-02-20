@@ -12,6 +12,7 @@ type PodOptions struct {
 	pvc       corev1.PersistentVolumeClaim
 	cmd       []string
 	args      []string
+	node      string
 }
 
 var script = `
@@ -74,6 +75,7 @@ func buildPvcbGetJob(options PodOptions) *batchv1.Job {
 				},
 				Spec: corev1.PodSpec{
 					RestartPolicy: "Never",
+					NodeName:      options.node,
 					Containers: []corev1.Container{
 						{
 							Name:    "browser",
