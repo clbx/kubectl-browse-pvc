@@ -13,6 +13,7 @@ type PodOptions struct {
 	cmd       []string
 	args      []string
 	node      string
+	user      int64
 }
 
 var script = `
@@ -56,6 +57,29 @@ func buildPvcbGetJob(options PodOptions) *batchv1.Job {
 		options.args = []string{script}
 	}
 
+	// Setup SecurityContext
+	var allowPrivilegeEscalation bool
+	var runAsNonRoot bool
+	if options.user == 0 {
+		runAsNonRoot = false
+		allowPrivilegeEscalation = true
+	} else {
+		runAsNonRoot = true
+		allowPrivilegeEscalation = false
+	}
+
+	securityContext := corev1.SecurityContext{
+		RunAsUser:                &options.user,
+		RunAsNonRoot:             &runAsNonRoot,
+		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+		SeccompProfile: &corev1.SeccompProfile{
+			Type: "RuntimeDefault",
+		},
+	}
+
 	TTLSecondsAfterFinished := new(int32)
 	*TTLSecondsAfterFinished = 10
 
@@ -78,10 +102,11 @@ func buildPvcbGetJob(options PodOptions) *batchv1.Job {
 					NodeName:      options.node,
 					Containers: []corev1.Container{
 						{
-							Name:    "browser",
-							Image:   image,
-							Command: options.cmd,
-							Args:    options.args,
+							Name:            "browser",
+							Image:           image,
+							Command:         options.cmd,
+							Args:            options.args,
+							SecurityContext: &securityContext,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "PS1",

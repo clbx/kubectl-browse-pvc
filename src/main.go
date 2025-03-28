@@ -27,6 +27,7 @@ import (
 
 var image string
 var Version string
+var containerUser int
 
 func main() {
 
@@ -50,6 +51,7 @@ func main() {
 	}
 
 	rootCmd.Flags().StringVarP(&image, "image", "i", "alpine", "Image to mount job to")
+	rootCmd.Flags().IntVarP(&containerUser, "container-user", "u", 0, "User ID to run the container as")
 	kubeConfigFlags.AddFlags(rootCmd.Flags())
 
 	if err := rootCmd.Execute(); err != nil {
@@ -119,6 +121,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		cmd:       []string{"/bin/sh", "-c", "--"},
 		args:      commandArgs,
 		node:      node,
+		user:      int64(containerUser),
 	}
 
 	// Build the Job
