@@ -60,21 +60,27 @@ func BuildPvcbGetJob(options PodOptions) *batchv1.Job {
 	// Setup SecurityContext
 	var allowPrivilegeEscalation bool
 	var runAsNonRoot bool
+	var capabilities corev1.Capabilities
 	if options.User == 0 {
 		runAsNonRoot = false
 		allowPrivilegeEscalation = true
+		capabilities = corev1.Capabilities{
+			Add:  []corev1.Capability{"CHOWN", "FOWNER"},
+			Drop: []corev1.Capability{"ALL"},
+		}
 	} else {
 		runAsNonRoot = true
 		allowPrivilegeEscalation = false
+		capabilities = corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		}
 	}
 
 	securityContext := corev1.SecurityContext{
 		RunAsUser:                &options.User,
 		RunAsNonRoot:             &runAsNonRoot,
 		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
-		Capabilities: &corev1.Capabilities{
-			Drop: []corev1.Capability{"ALL"},
-		},
+		Capabilities:             &capabilities,
 		SeccompProfile: &corev1.SeccompProfile{
 			Type: "RuntimeDefault",
 		},
