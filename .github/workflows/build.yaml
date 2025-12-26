@@ -35,7 +35,7 @@ jobs:
           LICENSE
 
   build-darwin-x86_64:
-    runs-on: macos-13
+    runs-on: macos-15-intel
     steps:
     - name: Set up Go
       uses: actions/setup-go@v4.1.0
