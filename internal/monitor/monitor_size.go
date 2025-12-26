@@ -1,7 +1,7 @@
 //go:build linux || darwin
 // +build linux darwin
 
-package main
+package monitor
 
 import (
 	"os"
@@ -12,24 +12,24 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-type sizeQueue struct {
-	resizeChan   chan remotecommand.TerminalSize
-	stopResizing chan struct{}
+type SizeQueue struct {
+	ResizeChan   chan remotecommand.TerminalSize
+	StopResizing chan struct{}
 }
 
-func (s *sizeQueue) Next() *remotecommand.TerminalSize {
-	size, ok := <-s.resizeChan
+func (s *SizeQueue) Next() *remotecommand.TerminalSize {
+	size, ok := <-s.ResizeChan
 	if !ok {
 		return nil
 	}
 	return &size
 }
 
-func (s *sizeQueue) Stop() {
-	close(s.stopResizing)
+func (s *SizeQueue) Stop() {
+	close(s.StopResizing)
 }
 
-func (s *sizeQueue) MonitorSize() {
+func (s *SizeQueue) MonitorSize() {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGWINCH)
 
@@ -39,12 +39,12 @@ func (s *sizeQueue) MonitorSize() {
 			width, height, err := term.GetSize(int(os.Stdout.Fd()))
 			if err == nil {
 				select {
-				case s.resizeChan <- remotecommand.TerminalSize{Width: uint16(width), Height: uint16(height)}:
+				case s.ResizeChan <- remotecommand.TerminalSize{Width: uint16(width), Height: uint16(height)}:
 				default:
 				}
 			}
-		case <-s.stopResizing:
-			close(s.resizeChan)
+		case <-s.StopResizing:
+			close(s.ResizeChan)
 			return
 		}
 	}

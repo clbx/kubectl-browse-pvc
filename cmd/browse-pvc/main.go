@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
+	"github.com/clbx/kubectl-browse-pvc/internal/monitor"
+	"github.com/clbx/kubectl-browse-pvc/internal/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
@@ -29,6 +31,8 @@ var image string
 var Version string
 var containerUser int
 
+var validCommands = []string{"image", "container-user"}
+
 func main() {
 
 	var kubeConfigFlags = genericclioptions.NewConfigFlags(true)
@@ -38,11 +42,12 @@ func main() {
 	}
 
 	var rootCmd = &cobra.Command{
-		Use:     "kubectl-browse-pvc <PVC-NAME> [-- COMMAND [ARGS...]]",
-		Short:   "Kubernetes PVC Browser",
-		Long:    `Kubernetes PVC Browser`,
-		Version: Version,
-		Args:    cobra.MinimumNArgs(1),
+		Use:       "kubectl-browse-pvc <PVC-NAME> [-- COMMAND [ARGS...]]",
+		Short:     "Kubernetes PVC Browser",
+		Long:      `Kubernetes PVC Browser`,
+		Version:   Version,
+		Args:      cobra.MinimumNArgs(1),
+		ValidArgs: validCommands,
 		Run: func(cmd *cobra.Command, args []string) {
 			pvcName := args[0]
 			commandArgs := args[1:]
@@ -97,7 +102,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		log.Fatalf("Failed to get pods: %v", err)
 	}
 
-	attachedPod := findPodByPVC(*nsPods, *targetPvc)
+	attachedPod := utils.FindPodByPVC(*nsPods, *targetPvc)
 
 	manyAccessMode := false
 	for _, mode := range targetPvc.Spec.AccessModes {
@@ -114,18 +119,18 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		node = attachedPod.Spec.NodeName
 	}
 
-	options := &PodOptions{
-		image:     image,
-		namespace: namespace,
-		pvc:       *targetPvc,
-		cmd:       []string{"/bin/sh", "-c", "--"},
-		args:      commandArgs,
-		node:      node,
-		user:      int64(containerUser),
+	options := &utils.PodOptions{
+		Image:     image,
+		Namespace: namespace,
+		Pvc:       *targetPvc,
+		Cmd:       []string{"/bin/sh", "-c", "--"},
+		Args:      commandArgs,
+		Node:      node,
+		User:      int64(containerUser),
 	}
 
 	// Build the Job
-	pvcbGetJob := buildPvcbGetJob(*options)
+	pvcbGetJob := utils.BuildPvcbGetJob(*options)
 	// Create Job
 	pvcbGetJob, err = clientset.BatchV1().Jobs(namespace).Create(context.TODO(), pvcbGetJob, metav1.CreateOptions{})
 
@@ -203,7 +208,7 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 		Post().
 		Resource("pods").
 		Name(pod.Name).
-		Namespace(options.namespace).
+		Namespace(options.Namespace).
 		SubResource("exec").
 		VersionedParams(&corev1.PodExecOptions{
 			Command: []string{"sh", "-c", "cd /mnt && (ash || bash || sh)"},
@@ -224,15 +229,15 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 	}
 	defer term.Restore(0, oldState)
 
-	terminalSizeQueue := &sizeQueue{
-		resizeChan:   make(chan remotecommand.TerminalSize, 1),
-		stopResizing: make(chan struct{}),
+	terminalSizeQueue := &monitor.SizeQueue{
+		ResizeChan:   make(chan remotecommand.TerminalSize, 1),
+		StopResizing: make(chan struct{}),
 	}
 
 	// prime with initial term size
 	width, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err == nil {
-		terminalSizeQueue.resizeChan <- remotecommand.TerminalSize{Width: uint16(width), Height: uint16(height)}
+		terminalSizeQueue.ResizeChan <- remotecommand.TerminalSize{Width: uint16(width), Height: uint16(height)}
 	}
 
 	go terminalSizeQueue.MonitorSize()
