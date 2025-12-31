@@ -20,7 +20,7 @@ func TestFindPodByPvc(t *testing.T) {
 		{
 			name: "Single Pod,Single PVC",
 			err:  nil,
-			client: fake.NewSimpleClientset(
+			client: fake.NewClientset(
 				&v1.PodList{
 					Items: []v1.Pod{
 						{

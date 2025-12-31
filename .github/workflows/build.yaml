@@ -1,5 +1,8 @@
 name: Build Job
 
+env:
+  GO_VERSION: 1.25.5
+
 on:
   workflow_call:
     inputs:
@@ -11,103 +14,103 @@ jobs:
   build-darwin-arm:
     runs-on: macos-latest
     steps:
-    - name: Set up Go
-      uses: actions/setup-go@v4.1.0
-      with:
-        go-version: "1.22.0"
+      - name: Set up Go
+        uses: actions/setup-go@v4.1.0
+        with:
+          go-version: "${{ env.GO_VERSION }}"
 
-    - name: Check out Code
-      uses: actions/checkout@v4.0.0
+      - name: Check out Code
+        uses: actions/checkout@v4.0.0
 
-    - name: Build
-      run: |
-        go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc cmd/browse-pvc/main.go
+      - name: Build
+        run: |
+          go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc cmd/browse-pvc/main.go
 
-    - name: Fix permissions
-      run: chmod +x ./kubectl-browse-pvc
+      - name: Fix permissions
+        run: chmod +x ./kubectl-browse-pvc
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: kubectl-browse-pvc-darwin-arm
-        path: |
-          ./kubectl-browse-pvc
-          LICENSE
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubectl-browse-pvc-darwin-arm
+          path: |
+            ./kubectl-browse-pvc
+            LICENSE
 
   build-darwin-x86_64:
     runs-on: macos-15-intel
     steps:
-    - name: Set up Go
-      uses: actions/setup-go@v4.1.0
-      with:
-        go-version: "1.22.0"
+      - name: Set up Go
+        uses: actions/setup-go@v4.1.0
+        with:
+          go-version: "${{ env.GO_VERSION }}"
 
-    - name: Check out Code
-      uses: actions/checkout@v4.0.0
+      - name: Check out Code
+        uses: actions/checkout@v4.0.0
 
-    - name: Build
-      run: |
-        go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc cmd/browse-pvc/main.go
+      - name: Build
+        run: |
+          go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc cmd/browse-pvc/main.go
 
-    - name: Fix permissions
-      run: chmod +x ./kubectl-browse-pvc
+      - name: Fix permissions
+        run: chmod +x ./kubectl-browse-pvc
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: kubectl-browse-pvc-darwin-x86_64
-        path: |
-          ./kubectl-browse-pvc
-          LICENSE
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubectl-browse-pvc-darwin-x86_64
+          path: |
+            ./kubectl-browse-pvc
+            LICENSE
 
   build-linux-x86_64:
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Go
-      uses: actions/setup-go@v4.1.0
-      with:
-        go-version: "1.22.0"
+      - name: Set up Go
+        uses: actions/setup-go@v4.1.0
+        with:
+          go-version: "${{ env.GO_VERSION }}"
 
-    - name: Check out Code
-      uses: actions/checkout@v4.0.0
+      - name: Check out Code
+        uses: actions/checkout@v4.0.0
 
-    - name: Build
-      run: |
-        CGO_ENABLED=0 go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc cmd/browse-pvc/main.go
+      - name: Build
+        run: |
+          CGO_ENABLED=0 go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc cmd/browse-pvc/main.go
 
-    - name: Fix permissions
-      run: chmod +x ./kubectl-browse-pvc
+      - name: Fix permissions
+        run: chmod +x ./kubectl-browse-pvc
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: kubectl-browse-pvc-linux-x86_64
-        path: |
-          ./kubectl-browse-pvc
-          LICENSE
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubectl-browse-pvc-linux-x86_64
+          path: |
+            ./kubectl-browse-pvc
+            LICENSE
 
   build-linux-arm:
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Go
-      uses: actions/setup-go@v4.1.0
-      with:
-        go-version: "1.22.0"
+      - name: Set up Go
+        uses: actions/setup-go@v4.1.0
+        with:
+          go-version: "${{ env.GO_VERSION }}"
 
-    - name: Check out Code
-      uses: actions/checkout@v4.0.0
+      - name: Check out Code
+        uses: actions/checkout@v4.0.0
 
-    - name: Build
-      run: |
-        CGO_ENABLED=0 GOARCH=arm64 go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc cmd/browse-pvc/main.go
+      - name: Build
+        run: |
+          CGO_ENABLED=0 GOARCH=arm64 go build -v -ldflags "-X main.Version=${{ inputs.version }}" -o kubectl-browse-pvc cmd/browse-pvc/main.go
 
-    - name: Fix permissions
-      run: chmod +x ./kubectl-browse-pvc
+      - name: Fix permissions
+        run: chmod +x ./kubectl-browse-pvc
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: kubectl-browse-pvc-linux-arm
-        path: |
-          ./kubectl-browse-pvc
-          LICENSE
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubectl-browse-pvc-linux-arm
+          path: |
+            ./kubectl-browse-pvc
+            LICENSE

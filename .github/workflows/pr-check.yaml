@@ -1,0 +1,28 @@
+name: PR Unit Test Check
+
+env:
+  GO_VERSION: 1.25.5
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  run-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout from PR branch
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v4.1.0
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+
+      - name: Test
+        run: |
+          CGO_ENABLED=0 go test -v ./...
