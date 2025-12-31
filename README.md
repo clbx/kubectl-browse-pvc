@@ -52,6 +52,14 @@ sudo mv kubectl_browse-pvc /usr/local/bin
 
 ### Test
 
+#### All Tests
+
+```sh
+go test -v ./...
+```
+
+#### Specific Modules
+
 ```sh
 go test -v github.com/clbx/kubectl-browse-pvc/<MODULE>
 ```
@@ -59,3 +67,7 @@ go test -v github.com/clbx/kubectl-browse-pvc/<MODULE>
 Example: `go test -v github.com/clbx/kubectl-browse-pvc/internal/utils`
 
 ### Build
+
+```sh
+go build -v -o kubectl-browse-pvc cmd/browse-pvc/main.go
+```
