@@ -121,6 +121,14 @@ func BuildPvcbGetJob(options PodOptions) *batchv1.Job {
 							},
 						},
 					},
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      "node-role.kubernetes.io",
+							Value:    "control-plane",
+							Operator: corev1.TolerationOpEqual,
+							Effect:   corev1.TaintEffectNoSchedule,
+						},
+					},
 					Volumes: []corev1.Volume{
 						{
 							Name: "target-pvc",
