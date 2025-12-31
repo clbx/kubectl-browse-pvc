@@ -104,6 +104,13 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 
 	attachedPod := utils.FindPodByPVC(*nsPods, *targetPvc)
 
+	// retrieve taints of the selected node to smartly build in tolerations
+	nodeTaints, err := utils.GetNodeTaints(clientset, attachedPod.Spec.NodeName)
+	if err != nil {
+		log.Fatalf("Failed to get taints for node: %s", attachedPod.Spec.NodeName)
+	}
+	tolerationsForNode := utils.BuildTolerationsForTaints(nodeTaints)
+
 	manyAccessMode := false
 	for _, mode := range targetPvc.Spec.AccessModes {
 		if mode == corev1.ReadWriteMany || mode == corev1.ReadOnlyMany {
@@ -120,13 +127,14 @@ func browseCommand(kubeConfigFlags *genericclioptions.ConfigFlags, pvcName strin
 	}
 
 	options := &utils.PodOptions{
-		Image:     image,
-		Namespace: namespace,
-		Pvc:       *targetPvc,
-		Cmd:       []string{"/bin/sh", "-c", "--"},
-		Args:      commandArgs,
-		Node:      node,
-		User:      int64(containerUser),
+		Image:       image,
+		Namespace:   namespace,
+		Pvc:         *targetPvc,
+		Cmd:         []string{"/bin/sh", "-c", "--"},
+		Args:        commandArgs,
+		Node:        node,
+		User:        int64(containerUser),
+		Tolerations: tolerationsForNode,
 	}
 
 	// Build the Job
