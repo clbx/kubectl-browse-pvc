@@ -7,13 +7,14 @@ import (
 )
 
 type PodOptions struct {
-	Image     string
-	Namespace string
-	Pvc       corev1.PersistentVolumeClaim
-	Cmd       []string
-	Args      []string
-	Node      string
-	User      int64
+	Image       string
+	Namespace   string
+	Pvc         corev1.PersistentVolumeClaim
+	Cmd         []string
+	Args        []string
+	Node        string
+	User        int64
+	Tolerations []corev1.Toleration
 }
 
 var script = `
@@ -127,6 +128,7 @@ func BuildPvcbGetJob(options PodOptions) *batchv1.Job {
 							},
 						},
 					},
+					Tolerations: options.Tolerations,
 					Volumes: []corev1.Volume{
 						{
 							Name: "target-pvc",
